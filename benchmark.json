@@ -1,0 +1,241 @@
+{
+  "benchmark": {
+    "tasks": [
+      {
+        "task_id": "T01",
+        "name": "merge_sorted_lists",
+        "label": "underconstrained",
+        "description": "Merge two sorted lists into one sorted list.",
+        "reference_implementation": "def merge_sorted_lists(a: list[int], b: list[int]) -> list[int]:\n    result = []\n    i, j = 0, 0\n    while i < len(a) and j < len(b):\n        if a[i] <= b[j]:\n            result.append(a[i])\n            i += 1\n        else:\n            result.append(b[j])\n            j += 1\n    result.extend(a[i:])\n    result.extend(b[j:])\n    return result",
+        "buggy_implementations": [
+          {
+            "name": "simple_concat",
+            "code": "def merge_sorted_lists(a: list[int], b: list[int]) -> list[int]:\n    return a + b"
+          }
+        ],
+        "planted_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10),\n       st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10))\ndef test_merge_sorted_lists(a, b):\n    a_sorted = sorted(a)\n    b_sorted = sorted(b)\n    result = merge_sorted_lists(a_sorted, b_sorted)\n    assert len(result) == len(a) + len(b)",
+        "correct_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10),\n       st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10))\ndef test_merge_sorted_lists(a, b):\n    a_sorted = sorted(a)\n    b_sorted = sorted(b)\n    result = merge_sorted_lists(a_sorted, b_sorted)\n    assert len(result) == len(a) + len(b)\n    assert result == sorted(a + b)",
+        "what_is_wrong": "Planted spec only checks length of result, not sortedness or contents.",
+        "repair_action": "Add sortedness and element equivalence assertion",
+        "coverage_signal": "length_only",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T02",
+        "name": "binary_search",
+        "label": "underconstrained",
+        "description": "Perform binary search to find the index of target in a sorted list. Return -1 if not found.",
+        "reference_implementation": "def binary_search(lst: list[int], target: int) -> int:\n    low, high = 0, len(lst) - 1\n    while low <= high:\n        mid = (low + high) // 2\n        if lst[mid] == target:\n            return mid\n        elif lst[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1",
+        "buggy_implementations": [
+          {
+            "name": "first_element_only",
+            "code": "def binary_search(lst: list[int], target: int) -> int:\n    return 0 if lst and lst[0] == target else -1"
+          }
+        ],
+        "planted_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=15), st.integers(min_value=-1000, max_value=1000))\ndef test_binary_search(lst, target):\n    lst_sorted = sorted(lst)\n    result = binary_search(lst_sorted, target)\n    assert -1 <= result < len(lst_sorted) + 1",
+        "correct_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=15), st.integers(min_value=-1000, max_value=1000))\ndef test_binary_search(lst, target):\n    lst_sorted = sorted(lst)\n    result = binary_search(lst_sorted, target)\n    assert -1 <= result < len(lst_sorted)\n    if result != -1:\n        assert lst_sorted[result] == target\n    else:\n        assert target not in lst_sorted",
+        "what_is_wrong": "Planted spec only checks that result index is within bounds, not that it actually finds the target or correctly returns -1.",
+        "repair_action": "Add target value and membership assertion",
+        "coverage_signal": "bounds_only",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T03",
+        "name": "remove_duplicates",
+        "label": "underconstrained",
+        "description": "Given a list of integers with possible duplicates, return a new list with all duplicates removed but preserving the original order of first occurrences of each element.",
+        "reference_implementation": "def remove_duplicates(lst: list[int]) -> list[int]:\n    seen = set()\n    result = []\n    for x in lst:\n        if x not in seen:\n            seen.add(x)\n            result.append(x)\n    return result",
+        "buggy_implementations": [
+          {
+            "name": "sorted_uniquify",
+            "code": "def remove_duplicates(lst: list[int]) -> list[int]:\n    return sorted(list(set(lst)))"
+          }
+        ],
+        "planted_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15))\ndef test_remove_duplicates(lst):\n    result = remove_duplicates(lst)\n    assert len(result) == len(set(result))",
+        "correct_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15))\ndef test_remove_duplicates(lst):\n    result = remove_duplicates(lst)\n    assert len(result) == len(set(result))\n    assert set(result) == set(lst)\n    expected = []\n    for x in lst:\n        if x not in expected:\n            expected.append(x)\n    assert result == expected",
+        "what_is_wrong": "Planted spec only checks uniqueness of result elements, not ordering or set equality with the input.",
+        "repair_action": "Add ordering and element set equality assertion",
+        "coverage_signal": "uniqueness_only",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T04",
+        "name": "rotate_list",
+        "label": "underconstrained",
+        "description": "Rotate a list to the right by k steps, where k is non-negative.",
+        "reference_implementation": "def rotate_list(lst: list[int], k: int) -> list[int]:\n    if not lst:\n        return lst\n    k = k % len(lst)\n    return lst[-k:] + lst[:-k]",
+        "buggy_implementations": [
+          {
+            "name": "identity",
+            "code": "def rotate_list(lst: list[int], k: int) -> list[int]:\n    return lst"
+          }
+        ],
+        "planted_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15), st.integers(min_value=0, max_value=50))\ndef test_rotate_list(lst, k):\n    result = rotate_list(lst, k)\n    assert len(result) == len(lst)",
+        "correct_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15), st.integers(min_value=0, max_value=50))\ndef test_rotate_list(lst, k):\n    result = rotate_list(lst, k)\n    assert len(result) == len(lst)\n    if lst:\n        eff_k = k % len(lst)\n        assert result == lst[-eff_k:] + lst[:-eff_k]",
+        "what_is_wrong": "Planted spec only asserts output length matches input length, permitting no-op implementation.",
+        "repair_action": "Add rotation correctness check",
+        "coverage_signal": "length_only",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T05",
+        "name": "flatten_nested",
+        "label": "underconstrained",
+        "description": "Flatten a nested list of integers (depth 2 max) into a single flat list.",
+        "reference_implementation": "def flatten_nested(lst: list[list[int]]) -> list[int]:\n    result = []\n    for sub in lst:\n        result.extend(sub)\n    return result",
+        "buggy_implementations": [
+          {
+            "name": "dummy_elements",
+            "code": "def flatten_nested(lst: list[list[int]]) -> list[int]:\n    return [1] * sum(len(sub) for sub in lst)"
+          }
+        ],
+        "planted_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.lists(st.integers(min_value=-100, max_value=100), max_size=5), max_size=5))\ndef test_flatten_nested(lst):\n    result = flatten_nested(lst)\n    assert len(result) == sum(len(sub) for sub in lst)",
+        "correct_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.lists(st.integers(min_value=-100, max_value=100), max_size=5), max_size=5))\ndef test_flatten_nested(lst):\n    result = flatten_nested(lst)\n    assert len(result) == sum(len(sub) for sub in lst)\n    expected = []\n    for sub in lst:\n        expected.extend(sub)\n    assert result == expected",
+        "what_is_wrong": "Planted spec only checks length of flattened list, ignoring contents.",
+        "repair_action": "Add contents correctness check",
+        "coverage_signal": "length_only",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T06",
+        "name": "factorial",
+        "label": "overconstrained",
+        "description": "Return the factorial of n. n must be non-negative.",
+        "reference_implementation": "import math\ndef factorial(n: int) -> int:\n    return math.factorial(n)",
+        "buggy_implementations": [],
+        "planted_spec": "from hypothesis import given, strategies as st\n@given(st.integers(min_value=1, max_value=10))\ndef test_factorial(n):\n    result = factorial(n)\n    assert result > 0\n    assert result > n",
+        "correct_spec": "from hypothesis import given, strategies as st\n@given(st.integers(min_value=0, max_value=10))\ndef test_factorial(n):\n    result = factorial(n)\n    assert result >= 1\n    if n > 2:\n        assert result > n",
+        "what_is_wrong": "Precondition min_value=1 excludes valid n=0, and assert result > n fails for valid inputs n=1, 2.",
+        "repair_action": "Widen precondition to min_value=0 and loosen postcondition to assert result >= 1",
+        "coverage_signal": "overconstrained",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T07",
+        "name": "gcd",
+        "label": "overconstrained",
+        "description": "Compute the greatest common divisor of a and b.",
+        "reference_implementation": "import math\ndef gcd(a: int, b: int) -> int:\n    return math.gcd(a, b)",
+        "buggy_implementations": [],
+        "planted_spec": "from hypothesis import given, strategies as st, assume\n@given(st.integers(min_value=-100, max_value=100), st.integers(min_value=-100, max_value=100))\ndef test_gcd(a, b):\n    assume(a != 0)\n    assume(b != 0)\n    result = gcd(a, b)\n    assert result > 1",
+        "correct_spec": "from hypothesis import given, strategies as st, assume\n@given(st.integers(min_value=-100, max_value=100), st.integers(min_value=-100, max_value=100))\ndef test_gcd(a, b):\n    assume(a != 0 or b != 0)\n    result = gcd(a, b)\n    assert result >= 1\n    assert a % result == 0\n    assert b % result == 0",
+        "what_is_wrong": "Precondition excludes any zero input, and postcondition asserts result > 1, failing for coprime inputs.",
+        "repair_action": "Allow zero inputs and change result > 1 assertion to result >= 1",
+        "coverage_signal": "overconstrained",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T08",
+        "name": "is_palindrome",
+        "label": "overconstrained",
+        "description": "Check if a string is a palindrome.",
+        "reference_implementation": "def is_palindrome(s: str) -> bool:\n    clean = \"\".join(c.lower() for c in s if c.isalnum())\n    return clean == clean[::-1]",
+        "buggy_implementations": [],
+        "planted_spec": "from hypothesis import given, strategies as st, assume\n@given(st.text(min_size=1, max_size=20))\ndef test_is_palindrome(s):\n    assume(s.isalpha() and s.islower())\n    result = is_palindrome(s)\n    assert result is True",
+        "correct_spec": "from hypothesis import given, strategies as st\n@given(st.text(max_size=20))\ndef test_is_palindrome(s):\n    result = is_palindrome(s)\n    clean = \"\".join(c.lower() for c in s if c.isalnum())\n    assert result == (clean == clean[::-1])",
+        "what_is_wrong": "Precondition restricts to lowercase letters only, and asserts result is always True, which fails for non-palindromes.",
+        "repair_action": "Remove restrictive assume and assert result correctly correlates with palindrome definition",
+        "coverage_signal": "overconstrained",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T09",
+        "name": "clamp",
+        "label": "overconstrained",
+        "description": "Clamp a value x between lo and hi, where lo <= hi.",
+        "reference_implementation": "def clamp(x: int, lo: int, hi: int) -> int:\n    return max(lo, min(x, hi))",
+        "buggy_implementations": [],
+        "planted_spec": "from hypothesis import given, strategies as st, assume\n@given(st.integers(), st.integers(), st.integers())\ndef test_clamp(x, lo, hi):\n    assume(lo <= x <= hi)\n    result = clamp(x, lo, hi)\n    assert result == x",
+        "correct_spec": "from hypothesis import given, strategies as st, assume\n@given(st.integers(), st.integers(), st.integers())\ndef test_clamp(x, lo, hi):\n    assume(lo <= hi)\n    result = clamp(x, lo, hi)\n    assert lo <= result <= hi\n    if x < lo:\n        assert result == lo\n    elif x > hi:\n        assert result == hi\n    else:\n        assert result == x",
+        "what_is_wrong": "Precondition assume(lo <= x <= hi) excludes cases where clamping should occur.",
+        "repair_action": "Remove assume(lo <= x <= hi) and only assume(lo <= hi)",
+        "coverage_signal": "overconstrained",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T10",
+        "name": "string_palindrome_check",
+        "label": "overconstrained",
+        "description": "Verify if a string is a palindrome. Return True if so, False otherwise.",
+        "reference_implementation": "def string_palindrome_check(s: str) -> bool:\n    return s == s[::-1]",
+        "buggy_implementations": [],
+        "planted_spec": "from hypothesis import given, strategies as st\n@given(st.text(min_size=2, max_size=20))\ndef test_string_palindrome_check(s):\n    result = string_palindrome_check(s)\n    assert result is True",
+        "correct_spec": "from hypothesis import given, strategies as st\n@given(st.text(max_size=20))\ndef test_string_palindrome_check(s):\n    result = string_palindrome_check(s)\n    assert result == (s == s[::-1])",
+        "what_is_wrong": "Precondition min_size=2 excludes empty/single-char strings, and asserts result is always True which fails for non-palindromes.",
+        "repair_action": "Allow arbitrary strings and check result matches reverse equality",
+        "coverage_signal": "overconstrained",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T11",
+        "name": "sum_list",
+        "label": "correct",
+        "description": "Return the sum of all integers in a list.",
+        "reference_implementation": "def sum_list(lst: list[int]) -> int:\n    return sum(lst)",
+        "buggy_implementations": [],
+        "planted_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=20))\ndef test_sum_list(lst):\n    result = sum_list(lst)\n    assert result == sum(lst)",
+        "correct_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=20))\ndef test_sum_list(lst):\n    result = sum_list(lst)\n    assert result == sum(lst)",
+        "what_is_wrong": "Nothing. This spec is correct.",
+        "repair_action": "none",
+        "coverage_signal": "correct",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T12",
+        "name": "max_of_list",
+        "label": "correct",
+        "description": "Return the maximum element in a non-empty list of integers.",
+        "reference_implementation": "def max_of_list(lst: list[int]) -> int:\n    return max(lst)",
+        "buggy_implementations": [],
+        "planted_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), min_size=1, max_size=20))\ndef test_max_of_list(lst):\n    result = max_of_list(lst)\n    assert result in lst\n    assert all(x <= result for x in lst)",
+        "correct_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), min_size=1, max_size=20))\ndef test_max_of_list(lst):\n    result = max_of_list(lst)\n    assert result in lst\n    assert all(x <= result for x in lst)",
+        "what_is_wrong": "Nothing. This spec is correct.",
+        "repair_action": "none",
+        "coverage_signal": "correct",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T13",
+        "name": "has_duplicates",
+        "label": "correct",
+        "description": "Check if a list of integers has any duplicates.",
+        "reference_implementation": "def has_duplicates(lst: list[int]) -> bool:\n    return len(lst) != len(set(lst))",
+        "buggy_implementations": [],
+        "planted_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=20))\ndef test_has_duplicates(lst):\n    result = has_duplicates(lst)\n    assert result == (len(lst) != len(set(lst)))",
+        "correct_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=20))\ndef test_has_duplicates(lst):\n    result = has_duplicates(lst)\n    assert result == (len(lst) != len(set(lst)))",
+        "what_is_wrong": "Nothing. This spec is correct.",
+        "repair_action": "none",
+        "coverage_signal": "correct",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T14",
+        "name": "is_sorted",
+        "label": "correct",
+        "description": "Check if a list of integers is sorted in ascending order.",
+        "reference_implementation": "def is_sorted(lst: list[int]) -> bool:\n    return all(a <= b for a, b in zip(lst, lst[1:]))",
+        "buggy_implementations": [],
+        "planted_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=20))\ndef test_is_sorted(lst):\n    result = is_sorted(lst)\n    assert result == all(a <= b for a, b in zip(lst, lst[1:]))",
+        "correct_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=20))\ndef test_is_sorted(lst):\n    result = is_sorted(lst)\n    assert result == all(a <= b for a, b in zip(lst, lst[1:]))",
+        "what_is_wrong": "Nothing. This spec is correct.",
+        "repair_action": "none",
+        "coverage_signal": "correct",
+        "signal3_valid": true
+      },
+      {
+        "task_id": "T15",
+        "name": "absolute_value",
+        "label": "correct",
+        "description": "Return the absolute value of an integer.",
+        "reference_implementation": "def absolute_value(x: int) -> int:\n    return abs(x)",
+        "buggy_implementations": [],
+        "planted_spec": "from hypothesis import given, strategies as st\n@given(st.integers(min_value=-1000, max_value=1000))\ndef test_absolute_value(x):\n    result = absolute_value(x)\n    assert result == abs(x)\n    assert result >= 0",
+        "correct_spec": "from hypothesis import given, strategies as st\n@given(st.integers(min_value=-1000, max_value=1000))\ndef test_absolute_value(x):\n    result = absolute_value(x)\n    assert result == abs(x)\n    assert result >= 0",
+        "what_is_wrong": "Nothing. This spec is correct.",
+        "repair_action": "none",
+        "coverage_signal": "correct",
+        "signal3_valid": true
+      }
+    ]
+  }
+}
