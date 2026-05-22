@@ -1,0 +1,11 @@
+google-generativeai>=0.8.0
+hypothesis>=6.100.0
+crosshair-tool>=0.0.102
+hypothesis-crosshair>=0.0.27
+coverage>=7.4.0
+pytest>=8.0.0
+pytest-timeout>=2.3.0
+black>=24.0.0
+pylint>=3.0.0
+streamlit>=1.35.0
+python-dotenv>=1.0.0
