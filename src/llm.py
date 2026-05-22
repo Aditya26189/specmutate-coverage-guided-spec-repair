@@ -87,7 +87,7 @@ def call_llm(
     use_cache: bool = True,
     strip_markdown: bool = True,
 ) -> str:
-    global _last_call_time
+    global _last_call_time, _current_key_index
     _load_cache()
 
     cache_key = hashlib.md5(f"{prompt}|{temperature}".encode()).hexdigest()
@@ -101,9 +101,14 @@ def call_llm(
         time.sleep(MIN_CALL_INTERVAL - elapsed)
 
     last_error = None
-    for attempt in range(MAX_RETRIES):
+    attempt = 0
+    while attempt < MAX_RETRIES:
+        if not _api_keys:
+            raise RuntimeError("No API keys remaining in list.")
+        
+        current_key = _get_current_key()
         try:
-            genai.configure(api_key=_get_current_key())
+            genai.configure(api_key=current_key)
             model = genai.GenerativeModel(MODEL_NAME)
             config = genai.types.GenerationConfig(temperature=temperature)
             response = model.generate_content(prompt, generation_config=config)
@@ -122,17 +127,31 @@ def call_llm(
         except Exception as e:
             last_error = e
             err_str = str(e).lower()
+            
+            # Catch 403 / Forbidden / blocked / invalid API key
+            if "403" in err_str or "forbidden" in err_str or "api_key_invalid" in err_str or "api key not valid" in err_str or "invalid api key" in err_str:
+                print(f"[llm] API key blocked/invalid (403) at index {_current_key_index}, removing permanently.")
+                if current_key in _api_keys:
+                    _api_keys.remove(current_key)
+                if not _api_keys:
+                    raise RuntimeError("All configured API keys have been removed (all failed with 403/Forbidden/Invalid Key).")
+                _current_key_index = _current_key_index % len(_api_keys)
+                # Note: We do NOT increment attempt, we just retry with the next available key
+                continue
+
             # 429 = quota exceeded, rotate key and retry immediately
             if "429" in err_str or "quota" in err_str or "resource_exhausted" in err_str:
-                print(f"[llm] Quota hit on key {_current_key_index}, rotating...")
+                print(f"[llm] Quota hit on key index {_current_key_index}, rotating...")
                 _rotate_key()
                 time.sleep(2)  # brief pause before retry with new key
+                attempt += 1
                 continue
+                
             # Other errors: wait and retry with same key
             print(f"[llm] API error (attempt {attempt+1}/{MAX_RETRIES}): {e}")
             time.sleep(5 * (attempt + 1))
+            attempt += 1
 
     raise RuntimeError(
-        f"Gemini 2.5 Flash failed after {MAX_RETRIES} attempts "
-        f"across {len(_api_keys)} key(s). Last error: {last_error}"
+        f"Gemini 2.5 Flash failed after {MAX_RETRIES} attempts. Last error: {last_error}"
     )

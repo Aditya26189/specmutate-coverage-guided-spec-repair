@@ -15,8 +15,8 @@ def test_merge_sorted(a, b):
     impls = [
         "def merge_sorted(a, b): return sorted(a) + sorted(b)",
         "def merge_sorted(a, b): return a + b",
-        "def merge_sorted(a, b): return a",
-        "def merge_sorted(a, b): return []",
+        "def merge_sorted(a, b): return [0] * (len(a) + len(b))",
+        "def merge_sorted(a, b): return [1] * (len(a) + len(b))",
         "def merge_sorted(a, b):\n    result=[]\n    i,j=0,0\n    while i<len(a) and j<len(b):\n        if a[i]<=b[j]: result.append(a[i]);i+=1\n        else: result.append(b[j]);j+=1\n    result.extend(a[i:]);result.extend(b[j:])\n    return result"
     ]
     score = compute_discrimination_score(spec=weak_spec, implementations=impls)

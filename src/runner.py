@@ -33,8 +33,15 @@ if __name__ == "__main__":
         print(json.dumps({"passed": True, "counterexample": None, "error": None}))
     except Exception as e:
         msg = str(e)
+        notes = getattr(e, "__notes__", [])
+        for note in notes:
+            msg += "\\n" + note
         counterexample = None
-        if "Falsifying example" in msg:
+        for note in notes:
+            if "Falsifying example" in note:
+                counterexample = note
+                break
+        if not counterexample and "Falsifying example" in msg:
             counterexample = msg
         print(json.dumps({"passed": False, "counterexample": counterexample,
                            "error": msg}))
