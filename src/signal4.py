@@ -22,12 +22,12 @@ def compute_stability_score(
     Low score = task description is ambiguous — flag for human review.
     """
     specs = []
-    for _ in range(n_generations):
+    for i in range(n_generations):
         prompt = SPEC_GEN_PROMPT.format(
             description=task_description,
             function_name=function_name
-        )
-        spec = call_llm(prompt, temperature=0.7, use_cache=False)
+        ) + f"\n# Gen ID: {i}"
+        spec = call_llm(prompt, temperature=0.7, use_cache=True)
         specs.append(spec)
 
     if test_impls is None:

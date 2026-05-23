@@ -169,7 +169,7 @@ def run_repair_loop(
             buggy_output=str(buggy_output)[:200]
         )
 
-        repaired_spec = call_llm(repair_prompt, temperature=0.2, use_cache=False)
+        repaired_spec = call_llm(repair_prompt, temperature=0.2, use_cache=True)
 
         # --- Convergence check ---
         repaired_check = run_spec_against_impl(

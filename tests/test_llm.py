@@ -17,13 +17,23 @@ def test_fence_stripping():
 
 def test_cache_hit_is_fast():
     """Second call with same prompt must return in under 0.5 seconds."""
-    clear_cache()
-    prompt = "Return the number 42. Nothing else."
-    call_llm(prompt)  # warm the cache
-    start = time.time()
-    call_llm(prompt)  # should hit cache
-    elapsed = time.time() - start
-    assert elapsed < 0.5, f"Cache hit took {elapsed:.2f}s — too slow"
+    import shutil
+    from pathlib import Path
+    cache_path = Path(".llm_cache.json")
+    backup_path = Path(".llm_cache.json.bak")
+    if cache_path.exists():
+        shutil.copy(cache_path, backup_path)
+    try:
+        clear_cache()
+        prompt = "Return the number 42. Nothing else."
+        call_llm(prompt)  # warm the cache
+        start = time.time()
+        call_llm(prompt)  # should hit cache
+        elapsed = time.time() - start
+        assert elapsed < 0.5, f"Cache hit took {elapsed:.2f}s — too slow"
+    finally:
+        if backup_path.exists():
+            shutil.move(backup_path, cache_path)
 
 def test_returns_string():
     prompt = "Return the word hello. Nothing else."

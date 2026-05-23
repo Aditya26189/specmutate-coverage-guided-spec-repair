@@ -35,7 +35,7 @@ def compute_completeness_score(
     )
 
     import json
-    raw = call_llm(prompt, temperature=0.7, use_cache=False)
+    raw = call_llm(prompt, temperature=0.7, use_cache=True)
     try:
         wrong_impls = json.loads(raw)
     except json.JSONDecodeError:
@@ -81,7 +81,7 @@ def compute_s1(
         spec=spec
     )
     import json
-    raw = call_llm(prompt, temperature=0.7, use_cache=False)
+    raw = call_llm(prompt, temperature=0.7, use_cache=True)
     try:
         wrong_impls = json.loads(raw)
     except json.JSONDecodeError:
