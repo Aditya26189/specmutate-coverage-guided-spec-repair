@@ -215,11 +215,34 @@ for t in tasks:
         "Ground Truth": t["ground_truth"],
     })
 df = pd.DataFrame(rows).set_index("Task")
+# Pure-CSS colour function — no matplotlib needed
+def _color_signal(val):
+    """Map 0–1 signal value to a green/yellow/red background cell."""
+    try:
+        v = float(val)
+    except (TypeError, ValueError):
+        return ""
+    # interpolate: 0 = red, 0.5 = yellow, 1 = green
+    if v >= 0.7:
+        bg = f"rgba(52,211,153,{0.15 + v*0.25})"   # green
+        fg = "#34d399"
+    elif v >= 0.4:
+        bg = f"rgba(251,191,36,{0.15 + v*0.20})"   # yellow
+        fg = "#fbbf24"
+    else:
+        bg = f"rgba(248,113,113,{0.15 + (1-v)*0.20})"  # red
+        fg = "#f87171"
+    return f"background-color: {bg}; color: {fg}; font-weight: 600"
+
+# Use map if available (pandas 2.1+), otherwise fallback to applymap
+style_obj = df.style
+if hasattr(style_obj, "map"):
+    style_obj = style_obj.map(_color_signal, subset=["S1 Completeness","S2 Discrimination","S3 CrossHair","S4 Stability"])
+else:
+    style_obj = style_obj.applymap(_color_signal, subset=["S1 Completeness","S2 Discrimination","S3 CrossHair","S4 Stability"])
+
 st.dataframe(
-    df.style
-      .background_gradient(subset=["S1 Completeness","S2 Discrimination","S3 CrossHair","S4 Stability"],
-                           cmap="RdYlGn", vmin=0, vmax=1)
-      .set_properties(**{"font-family": "JetBrains Mono", "font-size": "12px"}),
+    style_obj.set_properties(**{"font-family": "JetBrains Mono", "font-size": "12px"}),
     use_container_width=True,
     height=400,
 )
