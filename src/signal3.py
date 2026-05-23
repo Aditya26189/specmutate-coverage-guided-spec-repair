@@ -16,32 +16,28 @@ def double(x: int) -> int:
 '''
 
 
+_crosshair_health_check_cached = None
+
 def crosshair_health_check() -> bool:
     """Returns True if CrossHair is functional, False otherwise."""
+    global _crosshair_health_check_cached
+    if _crosshair_health_check_cached is not None:
+        return _crosshair_health_check_cached
+
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py",
                                     delete=False) as f:
         f.write(HEALTH_CHECK_CODE)
         tmp = f.name
     try:
-        # Check using crosshair command from our virtual environment's Scripts if it exists,
-        # or fall back to system crosshair command.
-        # Inside the venv, crosshair is installed in venv/Scripts/crosshair.exe.
-        # Let's try running crosshair.
-        cmd = "crosshair"
-        # We can construct path to crosshair in the virtual environment relative to the file.
-        # The workspace is c:\Users\LawLight\Desktop\sps hackathon.
-        # The crosshair path is c:\Users\LawLight\Desktop\sps hackathon\venv\Scripts\crosshair.exe.
-        # Using that is safer. Let's resolve it.
-        venv_crosshair = Path("c:/Users/LawLight/Desktop/sps hackathon/venv/Scripts/crosshair.exe")
-        if venv_crosshair.exists():
-            cmd = str(venv_crosshair)
-
         result = subprocess.run(
-            [cmd, "check", tmp],
+            [sys.executable, "-m", "crosshair", "check", tmp],
             capture_output=True, text=True, timeout=15
         )
-        return result.returncode == 0 or "Counterexample" in result.stdout
+        status = result.returncode == 0 or "Counterexample" in result.stdout
+        _crosshair_health_check_cached = status
+        return status
     except (subprocess.TimeoutExpired, FileNotFoundError):
+        _crosshair_health_check_cached = False
         return False
     finally:
         Path(tmp).unlink(missing_ok=True)
@@ -63,13 +59,8 @@ def compute_crosshair_score(function_code: str) -> dict:
         f.write(function_code)
         tmp = f.name
     try:
-        cmd = "crosshair"
-        venv_crosshair = Path("c:/Users/LawLight/Desktop/sps hackathon/venv/Scripts/crosshair.exe")
-        if venv_crosshair.exists():
-            cmd = str(venv_crosshair)
-
         result = subprocess.run(
-            [cmd, "check", tmp],
+            [sys.executable, "-m", "crosshair", "check", tmp],
             capture_output=True, text=True, timeout=30
         )
         output = result.stdout + result.stderr

@@ -27,7 +27,7 @@ def get_output_on_counterexample(impl_code: str, func_name: str, counterexample_
         # We search for test_func_name(...)
         match = re.search(r'test_\w+\s*\((.*)\)', counterexample_str, re.DOTALL)
         if not match:
-            # Fallback: search for any parenthesized expression
+            # Secondary attempt: search for any parenthesized expression
             match = re.search(r'\((.*)\)', counterexample_str, re.DOTALL)
             if not match:
                 return "unknown"
@@ -119,7 +119,7 @@ def run_repair_loop(
                 implementations=buggy_impls + [correct_impl]
             )
         else:
-            s2_score = s1_score  # fallback
+            s2_score = s1_score  # default
 
         # Identify bad constraint via mutation engine
         bad_constraint = identify_bad_constraint(

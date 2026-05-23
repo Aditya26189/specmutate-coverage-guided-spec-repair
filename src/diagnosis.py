@@ -70,6 +70,13 @@ def compute_verdict(
             "overconstrained_via": "mutation_coverage_delta",
         }
 
+    # overconstrained gate must remain above this line
+    # S2=0: zero discrimination is definitive underconstrained signal
+    if s2 == 0.0 and s1 < 0.9:
+        return {"verdict": "underconstrained", "confidence": 1.0 - s1,
+                "weighted_score": 1.0,
+                "signal_breakdown": {"s1": s1, "s2": s2, "s3": s3, "s4": s4}}
+
     # Invert S1 and S2 for the fusion score
     # (low S1/S2 = bad spec, so invert to get high = bad)
     underconstrained_signal = (
