@@ -1,0 +1,530 @@
+{
+  "diagnostic_accuracy": 0.8666666666666667,
+  "correct_diagnoses": 13,
+  "total_tasks": 15,
+  "repair_convergence_rate": 1.0,
+  "repair_converged": 8,
+  "repair_total": 8,
+  "results": [
+    {
+      "task_id": "T01",
+      "ground_truth": "underconstrained",
+      "predicted": "underconstrained",
+      "correct_diagnosis": true,
+      "signals": {
+        "s1": 0.4,
+        "s2": 0.0,
+        "s3": 0.0,
+        "s4": 0.5
+      },
+      "diagnosis": {
+        "verdict": "underconstrained",
+        "confidence": 0.5,
+        "weighted_score": 0.61,
+        "signal_breakdown": {
+          "s1": 0.4,
+          "s2": 0.0,
+          "s3": 0.0,
+          "s4": 0.5
+        }
+      },
+      "repair": {
+        "converged": true,
+        "iterations": 1,
+        "final_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10),\n       st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10))\ndef test_merge_sorted_lists(a, b):\n    a_sorted = sorted(a)\n    b_sorted = sorted(b)\n    result = merge_sorted_lists(a_sorted, b_sorted)\n    assert len(result) == len(a) + len(b)\n    assert result == sorted(a + b)",
+        "history": [
+          {
+            "iteration": 1,
+            "s1_score": 0.4,
+            "s2_score": 0.4,
+            "s4_score": 0.5,
+            "bad_constraint": null,
+            "counterexample": "Buggy impl passes spec: def merge_sorted_lists(a: list[int], b: list[int]) -> list[int]:\n    return a + b",
+            "repaired_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10),\n       st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10))\ndef test_merge_sorted_lists(a, b):\n    a_sorted = sorted(a)\n    b_sorted = sorted(b)\n    result = merge_sorted_lists(a_sorted, b_sorted)\n    assert len(result) == len(a) + len(b)\n    assert result == sorted(a + b)",
+            "converged": true
+          }
+        ],
+        "convergence_reason": "Repaired spec passes correct impl and catches 1/1 buggy impls"
+      }
+    },
+    {
+      "task_id": "T02",
+      "ground_truth": "underconstrained",
+      "predicted": "underconstrained",
+      "correct_diagnosis": true,
+      "signals": {
+        "s1": 0.4,
+        "s2": 0.0,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "underconstrained",
+        "confidence": 1.0,
+        "weighted_score": 0.5599999999999999,
+        "signal_breakdown": {
+          "s1": 0.4,
+          "s2": 0.0,
+          "s3": 0.0,
+          "s4": 1.0
+        }
+      },
+      "repair": {
+        "converged": true,
+        "iterations": 2,
+        "final_spec": "from hypothesis import given, strategies as st\n\ndef _reference_binary_search_any(arr, target):\n    low, high = 0, len(arr) - 1\n    while low <= high:\n        mid = (low + high) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1\n\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=15), st.integers(min_value=-1000, max_value=1000))\ndef test_binary_search(lst, target):\n    lst_sorted = sorted(lst)\n    result = binary_search(lst_sorted, target)\n    expected_index = _reference_binary_search_any(lst_sorted, target)\n    assert result == expected_index",
+        "history": [
+          {
+            "iteration": 1,
+            "s1_score": 0.4,
+            "s2_score": 0.4,
+            "s4_score": 1.0,
+            "bad_constraint": null,
+            "counterexample": "Buggy impl passes spec: def binary_search(lst: list[int], target: int) -> int:\n    return 0 if lst and lst[0] == target else",
+            "repaired_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=15), st.integers(min_value=-1000, max_value=1000))\ndef test_binary_search(lst, target):\n    lst_sorted = sorted(lst)\n    result = binary_search(lst_sorted, target)\n    if target in lst_sorted:\n        expected_index = lst_sorted.index(target)\n        assert result == expected_index\n    else:\n        assert result == -1",
+            "converged": false
+          },
+          {
+            "iteration": 2,
+            "s1_score": 1.0,
+            "s2_score": 1.0,
+            "s4_score": 1.0,
+            "bad_constraint": {
+              "operator": "RemovePostcondition",
+              "original": "assert result == expected_index",
+              "mutated": "",
+              "mutated_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=15), st.integers(min_value=-1000, max_value=1000))\ndef test_binary_search(lst, target):\n    lst_sorted = sorted(lst)\n    result = binary_search(lst_sorted, target)\n    if target in lst_sorted:\n        expected_index = lst_sorted.index(target)\n    else:\n        assert result == -1",
+              "coverage_delta": 1,
+              "newly_covered_lines": [
+                28
+              ]
+            },
+            "counterexample": "Falsifying example: test_binary_search(\n    lst=[0, 0, 0],\n    target=0,\n)",
+            "repaired_spec": "from hypothesis import given, strategies as st\n\ndef _reference_binary_search_any(arr, target):\n    low, high = 0, len(arr) - 1\n    while low <= high:\n        mid = (low + high) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1\n\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=15), st.integers(min_value=-1000, max_value=1000))\ndef test_binary_search(lst, target):\n    lst_sorted = sorted(lst)\n    result = binary_search(lst_sorted, target)\n    expected_index = _reference_binary_search_any(lst_sorted, target)\n    assert result == expected_index",
+            "converged": true
+          }
+        ],
+        "convergence_reason": "Repaired spec passes correct impl and catches 1/1 buggy impls"
+      }
+    },
+    {
+      "task_id": "T03",
+      "ground_truth": "underconstrained",
+      "predicted": "underconstrained",
+      "correct_diagnosis": true,
+      "signals": {
+        "s1": 0.0,
+        "s2": 0.0,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "underconstrained",
+        "confidence": 1.0,
+        "weighted_score": 0.7,
+        "signal_breakdown": {
+          "s1": 0.0,
+          "s2": 0.0,
+          "s3": 0.0,
+          "s4": 1.0
+        }
+      },
+      "repair": {
+        "converged": true,
+        "iterations": 1,
+        "final_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15))\ndef test_remove_duplicates(lst):\n    result = remove_duplicates(lst)\n    expected_result = []\n    seen = set()\n    for x in lst:\n        if x not in seen:\n            expected_result.append(x)\n            seen.add(x)\n    assert result == expected_result\n    assert len(result) == len(set(result))\n    assert set(result) == set(lst)",
+        "history": [
+          {
+            "iteration": 1,
+            "s1_score": 0.0,
+            "s2_score": 0.0,
+            "s4_score": 1.0,
+            "bad_constraint": null,
+            "counterexample": "Buggy impl passes spec: def remove_duplicates(lst: list[int]) -> list[int]:\n    return sorted(list(set(lst)))",
+            "repaired_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15))\ndef test_remove_duplicates(lst):\n    result = remove_duplicates(lst)\n    expected_result = []\n    seen = set()\n    for x in lst:\n        if x not in seen:\n            expected_result.append(x)\n            seen.add(x)\n    assert result == expected_result\n    assert len(result) == len(set(result))\n    assert set(result) == set(lst)",
+            "converged": true
+          }
+        ],
+        "convergence_reason": "Repaired spec passes correct impl and catches 1/1 buggy impls"
+      }
+    },
+    {
+      "task_id": "T04",
+      "ground_truth": "underconstrained",
+      "predicted": "correct",
+      "correct_diagnosis": false,
+      "signals": {
+        "s1": 0.8,
+        "s2": 0.0,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "correct",
+        "confidence": 1.0,
+        "weighted_score": 0.41999999999999993,
+        "signal_breakdown": {
+          "s1": 0.8,
+          "s2": 0.0,
+          "s3": 0.0,
+          "s4": 1.0
+        }
+      },
+      "repair": null
+    },
+    {
+      "task_id": "T05",
+      "ground_truth": "underconstrained",
+      "predicted": "correct",
+      "correct_diagnosis": false,
+      "signals": {
+        "s1": 0.8,
+        "s2": 0.0,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "correct",
+        "confidence": 1.0,
+        "weighted_score": 0.41999999999999993,
+        "signal_breakdown": {
+          "s1": 0.8,
+          "s2": 0.0,
+          "s3": 0.0,
+          "s4": 1.0
+        }
+      },
+      "repair": null
+    },
+    {
+      "task_id": "T06",
+      "ground_truth": "overconstrained",
+      "predicted": "overconstrained",
+      "correct_diagnosis": true,
+      "signals": {
+        "s1": 1.0,
+        "s2": 0.0,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "overconstrained",
+        "confidence": 1.0,
+        "weighted_score": 0.0,
+        "signal_breakdown": {
+          "s1": 1.0,
+          "s2": 0.0,
+          "s3": 0.0,
+          "s4": 1.0
+        },
+        "overconstrained_via": "correct_impl_fails_spec"
+      },
+      "repair": {
+        "converged": true,
+        "iterations": 1,
+        "final_spec": "from hypothesis import given, strategies as st\n@given(st.integers(min_value=0, max_value=10))\ndef test_factorial(n):\n    result = factorial(n)\n    assert result >= 1\n    if n > 2:\n        assert result > n",
+        "history": [
+          {
+            "iteration": 1,
+            "s1_score": 1.0,
+            "s2_score": 1.0,
+            "s4_score": 1.0,
+            "bad_constraint": null,
+            "counterexample": "Falsifying example: test_factorial(\n    n=1,\n)",
+            "repaired_spec": "from hypothesis import given, strategies as st\n@given(st.integers(min_value=0, max_value=10))\ndef test_factorial(n):\n    result = factorial(n)\n    assert result >= 1\n    if n > 2:\n        assert result > n",
+            "converged": true
+          }
+        ],
+        "convergence_reason": "Repaired spec passes correct impl"
+      }
+    },
+    {
+      "task_id": "T07",
+      "ground_truth": "overconstrained",
+      "predicted": "overconstrained",
+      "correct_diagnosis": true,
+      "signals": {
+        "s1": 1.0,
+        "s2": 0.0,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "overconstrained",
+        "confidence": 1.0,
+        "weighted_score": 0.0,
+        "signal_breakdown": {
+          "s1": 1.0,
+          "s2": 0.0,
+          "s3": 0.0,
+          "s4": 1.0
+        },
+        "overconstrained_via": "correct_impl_fails_spec"
+      },
+      "repair": {
+        "converged": true,
+        "iterations": 1,
+        "final_spec": "from hypothesis import given, strategies as st, assume\n@given(st.integers(min_value=-100, max_value=100), st.integers(min_value=-100, max_value=100))\ndef test_gcd(a, b):\n    assume(a != 0 or b != 0)\n    result = gcd(a, b)\n    assert result >= 1\n    assert a % result == 0\n    assert b % result == 0",
+        "history": [
+          {
+            "iteration": 1,
+            "s1_score": 1.0,
+            "s2_score": 1.0,
+            "s4_score": 1.0,
+            "bad_constraint": null,
+            "counterexample": "Falsifying example: test_gcd(\n    a=1,\n    b=1,\n)",
+            "repaired_spec": "from hypothesis import given, strategies as st, assume\n@given(st.integers(min_value=-100, max_value=100), st.integers(min_value=-100, max_value=100))\ndef test_gcd(a, b):\n    assume(a != 0 or b != 0)\n    result = gcd(a, b)\n    assert result >= 1\n    assert a % result == 0\n    assert b % result == 0",
+            "converged": true
+          }
+        ],
+        "convergence_reason": "Repaired spec passes correct impl"
+      }
+    },
+    {
+      "task_id": "T08",
+      "ground_truth": "overconstrained",
+      "predicted": "overconstrained",
+      "correct_diagnosis": true,
+      "signals": {
+        "s1": 1.0,
+        "s2": 0.0,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "overconstrained",
+        "confidence": 1.0,
+        "weighted_score": 0.0,
+        "signal_breakdown": {
+          "s1": 1.0,
+          "s2": 0.0,
+          "s3": 0.0,
+          "s4": 1.0
+        },
+        "overconstrained_via": "correct_impl_fails_spec"
+      },
+      "repair": {
+        "converged": true,
+        "iterations": 1,
+        "final_spec": "from hypothesis import given, strategies as st\n@given(st.text(max_size=20))\ndef test_is_palindrome(s):\n    result = is_palindrome(s)\n    clean = \"\".join(c.lower() for c in s if c.isalnum())\n    assert result == (clean == clean[::-1])",
+        "history": [
+          {
+            "iteration": 1,
+            "s1_score": 1.0,
+            "s2_score": 1.0,
+            "s4_score": 1.0,
+            "bad_constraint": null,
+            "counterexample": "Falsifying example: test_is_palindrome(\n    s='ab',\n)",
+            "repaired_spec": "from hypothesis import given, strategies as st\n@given(st.text(max_size=20))\ndef test_is_palindrome(s):\n    result = is_palindrome(s)\n    clean = \"\".join(c.lower() for c in s if c.isalnum())\n    assert result == (clean == clean[::-1])",
+            "converged": true
+          }
+        ],
+        "convergence_reason": "Repaired spec passes correct impl"
+      }
+    },
+    {
+      "task_id": "T09",
+      "ground_truth": "overconstrained",
+      "predicted": "overconstrained",
+      "correct_diagnosis": true,
+      "signals": {
+        "s1": 1.0,
+        "s2": 0.0,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "overconstrained",
+        "confidence": 1.0,
+        "weighted_score": 0.0,
+        "signal_breakdown": {
+          "s1": 1.0,
+          "s2": 0.0,
+          "s3": 0.0,
+          "s4": 1.0
+        },
+        "overconstrained_via": "correct_impl_fails_spec"
+      },
+      "repair": {
+        "converged": true,
+        "iterations": 1,
+        "final_spec": "from hypothesis import given, strategies as st, assume\n@given(st.integers(), st.integers(), st.integers())\ndef test_clamp(x, lo, hi):\n    assume(lo <= hi)\n    result = clamp(x, lo, hi)\n    assert lo <= result <= hi\n    if x < lo:\n        assert result == lo\n    elif x > hi:\n        assert result == hi\n    else:\n        assert result == x",
+        "history": [
+          {
+            "iteration": 1,
+            "s1_score": 1.0,
+            "s2_score": 1.0,
+            "s4_score": 1.0,
+            "bad_constraint": null,
+            "counterexample": "None",
+            "repaired_spec": "from hypothesis import given, strategies as st, assume\n@given(st.integers(), st.integers(), st.integers())\ndef test_clamp(x, lo, hi):\n    assume(lo <= hi)\n    result = clamp(x, lo, hi)\n    assert lo <= result <= hi\n    if x < lo:\n        assert result == lo\n    elif x > hi:\n        assert result == hi\n    else:\n        assert result == x",
+            "converged": true
+          }
+        ],
+        "convergence_reason": "Repaired spec passes correct impl"
+      }
+    },
+    {
+      "task_id": "T10",
+      "ground_truth": "overconstrained",
+      "predicted": "overconstrained",
+      "correct_diagnosis": true,
+      "signals": {
+        "s1": 1.0,
+        "s2": 0.0,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "overconstrained",
+        "confidence": 1.0,
+        "weighted_score": 0.0,
+        "signal_breakdown": {
+          "s1": 1.0,
+          "s2": 0.0,
+          "s3": 0.0,
+          "s4": 1.0
+        },
+        "overconstrained_via": "correct_impl_fails_spec"
+      },
+      "repair": {
+        "converged": true,
+        "iterations": 1,
+        "final_spec": "from hypothesis import given, strategies as st\n@given(st.text(max_size=20))\ndef test_string_palindrome_check(s):\n    result = string_palindrome_check(s)\n    assert result == (s == s[::-1])",
+        "history": [
+          {
+            "iteration": 1,
+            "s1_score": 1.0,
+            "s2_score": 1.0,
+            "s4_score": 1.0,
+            "bad_constraint": null,
+            "counterexample": "Falsifying example: test_string_palindrome_check(\n    s='01',\n)",
+            "repaired_spec": "from hypothesis import given, strategies as st\n@given(st.text(max_size=20))\ndef test_string_palindrome_check(s):\n    result = string_palindrome_check(s)\n    assert result == (s == s[::-1])",
+            "converged": true
+          }
+        ],
+        "convergence_reason": "Repaired spec passes correct impl"
+      }
+    },
+    {
+      "task_id": "T11",
+      "ground_truth": "correct",
+      "predicted": "correct",
+      "correct_diagnosis": true,
+      "signals": {
+        "s1": 1.0,
+        "s2": 0.4,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "correct",
+        "confidence": 1.0,
+        "weighted_score": 0.21,
+        "signal_breakdown": {
+          "s1": 1.0,
+          "s2": 0.4,
+          "s3": 0.0,
+          "s4": 1.0
+        }
+      },
+      "repair": null
+    },
+    {
+      "task_id": "T12",
+      "ground_truth": "correct",
+      "predicted": "correct",
+      "correct_diagnosis": true,
+      "signals": {
+        "s1": 1.0,
+        "s2": 0.4,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "correct",
+        "confidence": 1.0,
+        "weighted_score": 0.21,
+        "signal_breakdown": {
+          "s1": 1.0,
+          "s2": 0.4,
+          "s3": 0.0,
+          "s4": 1.0
+        }
+      },
+      "repair": null
+    },
+    {
+      "task_id": "T13",
+      "ground_truth": "correct",
+      "predicted": "correct",
+      "correct_diagnosis": true,
+      "signals": {
+        "s1": 1.0,
+        "s2": 0.4,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "correct",
+        "confidence": 1.0,
+        "weighted_score": 0.21,
+        "signal_breakdown": {
+          "s1": 1.0,
+          "s2": 0.4,
+          "s3": 0.0,
+          "s4": 1.0
+        }
+      },
+      "repair": null
+    },
+    {
+      "task_id": "T14",
+      "ground_truth": "correct",
+      "predicted": "correct",
+      "correct_diagnosis": true,
+      "signals": {
+        "s1": 1.0,
+        "s2": 0.4,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "correct",
+        "confidence": 1.0,
+        "weighted_score": 0.21,
+        "signal_breakdown": {
+          "s1": 1.0,
+          "s2": 0.4,
+          "s3": 0.0,
+          "s4": 1.0
+        }
+      },
+      "repair": null
+    },
+    {
+      "task_id": "T15",
+      "ground_truth": "correct",
+      "predicted": "correct",
+      "correct_diagnosis": true,
+      "signals": {
+        "s1": 1.0,
+        "s2": 0.4,
+        "s3": 0.0,
+        "s4": 1.0
+      },
+      "diagnosis": {
+        "verdict": "correct",
+        "confidence": 1.0,
+        "weighted_score": 0.21,
+        "signal_breakdown": {
+          "s1": 1.0,
+          "s2": 0.4,
+          "s3": 0.0,
+          "s4": 1.0
+        }
+      },
+      "repair": null
+    }
+  ]
+}
