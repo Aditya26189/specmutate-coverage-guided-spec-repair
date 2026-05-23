@@ -10,7 +10,7 @@ import google.generativeai as genai
 
 load_dotenv()
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-2.0-flash-exp"  # TEMP: swapped while gemini-2.5-flash quota exhausted. Revert when quota renews.
 CACHE_FILE = Path(".llm_cache.json")
 MIN_CALL_INTERVAL = 1.0  # seconds between calls (rate limit safety)
 MAX_RETRIES = 5           # retries per call before giving up
