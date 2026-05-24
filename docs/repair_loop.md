@@ -137,36 +137,40 @@ The LLM then knows: "On input `n=0`, correct returns `1`, buggy returns `0`. You
 
 **Task:** A function that returns `True` if a string is a palindrome (ignoring case and non-alphanumeric characters).
 
-**Planted spec (broken):**
+**Planted spec (broken — from benchmark.json):**
 ```python
-@given(st.text())
+@given(st.text(min_size=1, max_size=20))
 def test_is_palindrome(s):
-    if is_palindrome(s):
-        assert s == s[::-1]  # ← wrong: doesn't handle case/non-alnum
+    assume(s.isalpha() and s.islower())
+    result = is_palindrome(s)
+    assert result is True  # ← wrong: requires ALL strings to be palindromes
 ```
 
-**Iteration 1:**
-- Counterexample: `s='A'` (fails because `'A' != 'a'`)
-- Repair attempt: `assert is_palindrome(s) == (s == s[::-1])`
-- Convergence check: FAILED — still incorrect for `'A man a plan'`
+**Iteration 1** (from `benchmark_results.json`):
+- Bad constraint: `assume(s.isalpha() and s.islower())`, operator = `RemovePrecondition`, delta = 2
+- Counterexample: `Falsifying example: test_is_palindrome(s='aab')`
+- Repair attempt: `assert result == (s == s[::-1])`
+- Convergence check: FAILED — still incorrect for case-insensitive palindromes (`s='0:'` fails)
 
-**Iteration 2:**
-- Counterexample: `s='0:'` (spec fails on mixed chars)
-- Repair prompt now includes: mutation operator = `FlipComparison`, delta = 2
+**Iteration 2** (from `benchmark_results.json`):
+- Counterexample: `Falsifying example: test_is_palindrome(s='0:')`
+- Bad constraint: `null` (mutation engine found no improving mutation on the iteration-1 spec)
 - Repair attempt:
 ```python
-@given(st.text())
+@given(st.text(max_size=20))
 def test_is_palindrome(s):
     cleaned = "".join(c.lower() for c in s if c.isalnum())
     assert is_palindrome(s) == (cleaned == cleaned[::-1])
 ```
-- Convergence check: PASSED ✓ — correct impl passes, 3/4 buggy impls caught
+- Convergence check: PASSED ✓ — correct impl passes, repaired spec catches wrong impls
 
 **Result:** `converged=True, iterations=2`
 
 ---
 
 ## Case Study: T09 — clamp (1-Iteration Repair)
+
+**Important distinction for T09:** Gate 1 fires during *diagnosis* and classifies T09 as overconstrained (the correct implementation fails the spec `assume(lo <= x <= hi)` when `x < lo`). The mutation engine runs separately inside the *repair loop* to identify which constraint to fix. In T09's repair iteration, the mutation engine identified `result == x` (FlipComparison, delta=5) as the bad constraint — not `assume(lo <= x <= hi)`. The counterexample was `None` (the repair prompt used the Gate 1 falsifying example from diagnosis). The LLM correctly inferred to relax the assume and broaden the postcondition.
 
 **Planted spec (broken):**
 ```python
@@ -176,19 +180,17 @@ def test_clamp(x, lo, hi):
     assert clamp(x, lo, hi) == x
 ```
 
-**Iteration 1:**
-- Bad constraint identified: `assume(lo <= x <= hi)`, operator = `RemovePrecondition`, delta = 4
-- Counterexample: correct impl fails when `x < lo` (clamp should return `lo`, not `x`)
+**Iteration 1** (from `benchmark_results.json`):
+- Bad constraint: `result == x`, operator = `FlipComparison`, delta = 5 (exposes 5 new lines)
+- Counterexample: `None` (repair uses Gate 1 diagnosis context)
 - Repair:
 ```python
 @given(st.integers(), st.integers(), st.integers())
 def test_clamp(x, lo, hi):
     assume(lo <= hi)
     result = clamp(x, lo, hi)
-    assert lo <= result <= hi
-    if x < lo: assert result == lo
-    elif x > hi: assert result == hi
-    else: assert result == x
+    expected = max(lo, min(x, hi))
+    assert result == expected
 ```
 - Convergence: PASSED ✓
 

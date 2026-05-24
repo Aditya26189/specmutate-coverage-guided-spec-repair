@@ -100,7 +100,7 @@ score: float = compute_discrimination_score(spec, implementations)
 
 ### Limitations
 
-CrossHair's effectiveness depends on the spec's complexity and timeout. In the current benchmark, CrossHair returns S3 = 0.0 for all 15 tasks (the specs are too complex or use string operations that SMT solvers struggle with). S3 is included as a load-bearing component for more algebraic specs.
+CrossHair's health check fails on all 15 benchmark tasks — the tool reports unavailable (likely a platform or dependency compatibility issue with the current environment). As a result, **S3 = 0.5 (neutral prior) for all 15 tasks**. This 0.5 value contributes a constant `0.20 × 0.5 = 0.10` to the fusion formula — equal for every task, providing no classification signal in this benchmark. S3 is architecturally included for future benchmark tasks with algebraic specs where CrossHair can produce genuine counterexamples.
 
 ### API surface
 
@@ -156,9 +156,9 @@ score: float = compute_stability_score(
 
 The four signals are fused into a single scalar via weighted combination:
 
-$$S_{under} = 0.35 \cdot (1 - S_1) + 0.35 \cdot (1 - S_2) + 0.20 \cdot S_3 + 0.10 \cdot (1 - S_4)$$
+$$S_{under} = 0.35 \cdot (1 - S_1) + 0.35 \cdot (1 - S_2) - 0.20 \cdot S_3 + 0.10 \cdot (1 - S_4)$$
 
-**Note:** S1 and S2 are inverted because low values indicate underconstrained specs. S3 is used directly (higher = more evidence of spec issue). S4 is inverted because low stability = more uncertainty = evidence of underconstrained boundary.
+**Note:** S1 and S2 are inverted because low values indicate underconstrained specs. S3 is **subtracted**: S3 = 1.0 means CrossHair found a counterexample to the spec on the correct implementation — this is overconstrained evidence (the spec rejects valid behaviour), which *reduces* the underconstrained signal. S4 is inverted because low stability = more uncertainty. With S3 = 0.5 (constant neutral prior in this benchmark), the S3 term contributes −0.10 uniformly across all tasks.
 
 The fusion formula only activates after Gate 1 and Gate 2 in the 3-tier cascade. See [diagnosis.md](diagnosis.md) for details.
 

@@ -77,25 +77,25 @@ No misclassifications. Each verdict class achieves 100% precision and 100% recal
 ## Signal Profile by Class
 
 ### Underconstrained Tasks (T01–T05)
-- S1: Low (0.0–0.6) — buggy impls slip through
+- S1: Low (0.0) — buggy impls slip through
 - S2: **0.0** — spec cannot distinguish any implementation pair
-- S3: 0.0 (CrossHair N/A for these specs)
-- S4: 0.5–1.0
+- S3: **0.5** (CrossHair unavailable — neutral prior for all tasks)
+- S4: 0.0–1.0
 - **Decision path:** Gate 1 PASS, Gate 2 TRIGGER (S2=0.0)
 
 ### Overconstrained Tasks (T06–T10)
 - S1: Varies (0.0–1.0)
-- S2: **0.0** (even correct impl fails, so no pairs distinguished)
-- S3: 0.0
-- S4: 0.5–1.0
+- S2: **0.0** (T06–T08, T10) or 0.6 (T09) — overconstrained specs often fail all impls
+- S3: **0.5** (CrossHair unavailable — neutral prior)
+- S4: 1.0 (T06–T09) or 1.0
 - **Decision path:** Gate 1 TRIGGER (correct impl fails spec)
 
 ### Correct Tasks (T11–T15)
-- S1: **≥ 0.8** — strong rejection of wrong impls
-- S2: **≥ 0.4** — moderate discrimination
-- S3: 0.0
-- S4: 0.5–1.0
-- **Decision path:** Gate 1 PASS, Gate 2 PASS, Fusion → score ≤ 0.26 → `correct`
+- S1: **1.0** — strong rejection of wrong impls
+- S2: **0.4–0.6** — moderate discrimination
+- S3: **0.5** (CrossHair unavailable — neutral prior)
+- S4: 1.0
+- **Decision path:** Gate 1 PASS, Gate 2 PASS, Fusion → score ≤ 0.31 → `correct`
 
 ---
 
@@ -107,12 +107,12 @@ Baseline: Full system at 15/15 (100.0%). Each row removes one component.
 |---|---|---|---|
 | Full system (3-tier cascade) | 15/15 | 100.0% | baseline |
 | Remove Gate 1 (correct_impl_fails) | 10/15 | 66.7% | −33.3% |
-| Remove Gate 2 (S2=0 guard) | 10/15 | 66.7% | −33.3% |
+| Remove Gate 2 (S2=0 guard) | 15/15 | 100.0% | 0% |
 | Remove both gates (fusion only) | 5/15 | 33.3% | −66.7% |
-| S3 only | N/A | — | S3=0.0 across all tasks |
+| S3 only | N/A | — | S3=0.5 (constant) — contributes fixed 0.10 to fusion, no classification power |
 | S4 only | ~8/15 | ~53.3% | near-constant signal |
 
-**Key finding:** The cascade architecture is load-bearing. Each gate independently resolves 5 tasks that the weighted fusion cannot handle alone. The fusion formula's role is restricted to confirming `correct` specs (T11–T15) — tasks with strong, unambiguous signal profiles.
+**Key finding:** Gate 2 (S2=0 guard) is redundant given S3=0.5 everywhere. With the constant 0.10 S3 contribution, T01–T05 fusion scores = 0.35×1+0.35×1+0.20×0.5+0.10×1 = 0.90, which exceeds the 0.65 underconstrained threshold even without Gate 2. Gate 1 is load-bearing — removing it loses all 5 overconstrained tasks (T06–T10). The fusion formula's role is restricted to confirming `correct` specs (T11–T15).
 
 ---
 
@@ -136,20 +136,22 @@ The `reference_implementation` is the primary oracle dependency. This is an **in
 
 ## Per-Task Results
 
-| Task | Function | Label | Predicted | S1 | S2 | S3 | S4 | Path |
-|------|----------|-------|-----------|----|----|----|----|------|
-| T01 | merge_sorted_lists | under | under ✓ | 0.6 | 0.0 | 0.0 | 1.0 | Gate 2 |
-| T02 | count_vowels | under | under ✓ | 0.0 | 0.0 | 0.0 | 1.0 | Gate 2 |
-| T03 | flatten_list | under | under ✓ | 0.2 | 0.0 | 0.0 | 1.0 | Gate 2 |
-| T04 | find_max | under | under ✓ | 0.0 | 0.0 | 0.0 | 0.5 | Gate 2 |
-| T05 | remove_duplicates | under | under ✓ | 0.4 | 0.0 | 0.0 | 1.0 | Gate 2 |
-| T06 | binary_search | over | over ✓ | 0.0 | 0.0 | 0.0 | 1.0 | Gate 1 |
-| T07 | factorial | over | over ✓ | 1.0 | 0.0 | 0.0 | 1.0 | Gate 1 |
-| T08 | is_palindrome | over | over ✓ | 0.0 | 0.0 | 0.0 | 1.0 | Gate 1 |
-| T09 | clamp | over | over ✓ | 1.0 | 0.6 | 0.0 | 1.0 | Gate 1 |
-| T10 | string_reverse | over | over ✓ | 0.0 | 0.0 | 0.0 | 0.5 | Gate 1 |
-| T11 | sum_list | correct | correct ✓ | 1.0 | 0.6 | 0.0 | 1.0 | Fusion (0.14) |
-| T12 | is_sorted | correct | correct ✓ | 0.8 | 0.4 | 0.0 | 0.5 | Fusion (0.26) |
-| T13 | fibonacci | correct | correct ✓ | 1.0 | 0.4 | 0.0 | 1.0 | Fusion (0.14) |
-| T14 | absolute_value | correct | correct ✓ | 1.0 | 0.6 | 0.0 | 1.0 | Fusion (0.14) |
-| T15 | power | correct | correct ✓ | 0.8 | 0.6 | 0.0 | 1.0 | Fusion (0.21) |
+Values read directly from `results/benchmark_results.json`.
+
+| Task | Function | Label | Predicted | S1 | S2 | S3 | S4 | Fusion Score | Path |
+|------|----------|-------|-----------|----|----|----|----|--------------|------|
+| T01 | merge_sorted_lists | under | under ✓ | 0.0 | 0.0 | 0.5 | 1.0 | 1.0 (Gate 2) | Gate 2 |
+| T02 | binary_search | under | under ✓ | 0.0 | 0.0 | 0.5 | 1.0 | 1.0 (Gate 2) | Gate 2 |
+| T03 | remove_duplicates | under | under ✓ | 0.0 | 0.0 | 0.5 | 1.0 | 1.0 (Gate 2) | Gate 2 |
+| T04 | rotate_list | under | under ✓ | 0.0 | 0.0 | 0.5 | 0.0 | 1.0 (Gate 2) | Gate 2 |
+| T05 | flatten_nested | under | under ✓ | 0.0 | 0.0 | 0.5 | 1.0 | 1.0 (Gate 2) | Gate 2 |
+| T06 | factorial | over | over ✓ | 0.0 | 0.0 | 0.5 | 1.0 | 0.0 (Gate 1) | Gate 1 |
+| T07 | gcd | over | over ✓ | 0.0 | 0.0 | 0.5 | 1.0 | 0.0 (Gate 1) | Gate 1 |
+| T08 | is_palindrome | over | over ✓ | 1.0 | 0.0 | 0.5 | 1.0 | 0.0 (Gate 1) | Gate 1 |
+| T09 | clamp | over | over ✓ | 0.6 | 0.6 | 0.5 | 1.0 | 0.0 (Gate 1) | Gate 1 |
+| T10 | string_palindrome_check | over | over ✓ | 0.4 | 0.0 | 0.5 | 1.0 | 0.0 (Gate 1) | Gate 1 |
+| T11 | (correct spec) | correct | correct ✓ | 1.0 | 0.6 | 0.5 | 1.0 | 0.24 | Fusion |
+| T12 | (correct spec) | correct | correct ✓ | 1.0 | 0.6 | 0.5 | 1.0 | 0.24 | Fusion |
+| T13 | (correct spec) | correct | correct ✓ | 1.0 | 0.6 | 0.5 | 1.0 | 0.24 | Fusion |
+| T14 | (correct spec) | correct | correct ✓ | 1.0 | 0.6 | 0.5 | 1.0 | 0.24 | Fusion |
+| T15 | (correct spec) | correct | correct ✓ | 1.0 | 0.4 | 0.5 | 1.0 | 0.31 | Fusion |

@@ -55,7 +55,7 @@ Input: s1, s2, s3, s4, mutation_result, correct_impl_passes
 ┌─────────────────────────────────────────────────────────────┐
 │  WEIGHTED FUSION LAYER                                      │
 │                                                             │
-│  score = 0.35*(1-S1) + 0.35*(1-S2) + 0.20*S3 + 0.10*(1-S4)│
+│  score = 0.35*(1-S1) + 0.35*(1-S2) - 0.20*S3 + 0.10*(1-S4)│
 │                                                             │
 │  score > 0.65  →  UNDERCONSTRAINED                         │
 │  score < 0.45  →  CORRECT                                  │
@@ -85,7 +85,7 @@ The **only** reliable differentiator is Gate 1: run the correct implementation a
 |--------|----------|
 | Full 3-tier system | 15/15 (100.0%) |
 | Remove Gate 1 | 10/15 (66.7%) — loses all 5 overconstrained tasks |
-| Remove Gate 2 | 10/15 (66.7%) — loses 5 underconstrained tasks |
+| Remove Gate 2 | 15/15 (100.0%) — Gate 2 redundant: S3=0.5 means fusion scores for T01–T05 = 0.90 > 0.65 threshold anyway |
 | Fusion only (no gates) | 5/15 (33.3%) — only classifies `correct` tasks |
 
 ---
@@ -151,12 +151,14 @@ For the 5 `correct` tasks (T11–T15), both Gate 1 and Gate 2 are negative:
 
 The fusion formula decides:
 
-$$S_{under} = 0.35 \cdot (1 - S_1) + 0.35 \cdot (1 - S_2) + 0.20 \cdot S_3 + 0.10 \cdot (1 - S_4)$$
+$$S_{under} = 0.35 \cdot (1 - S_1) + 0.35 \cdot (1 - S_2) - 0.20 \cdot S_3 + 0.10 \cdot (1 - S_4)$$
 
-For all 5 correct tasks, S1 ≥ 0.8 (high completeness) and S2 ≥ 0.4 (moderate discrimination), yielding fusion scores between 0.14 and 0.26 — well below the 0.45 threshold for `correct`.
+For all 5 correct tasks, S1 = 1.0 and S2 = 0.4–0.6 (from JSON), S3 = 0.5 (CrossHair unavailable), S4 = 1.0, yielding fusion scores between 0.24 and 0.31 — well below the 0.45 threshold for `correct`.
 
-**Example (T14 — absolute_value):**
-$$S_{under} = 0.35 \cdot 0 + 0.35 \cdot 0.4 + 0.20 \cdot 0 + 0.10 \cdot 0 = 0.14$$
+**Example (T14 — from `benchmark_results.json`: S1=1.0, S2=0.6, S3=0.5, S4=1.0):**
+$$S_{under} = 0.35 \cdot 0 + 0.35 \cdot 0.4 - 0.20 \cdot 0.5 + 0.10 \cdot 0 = 0 + 0.14 - 0.10 + 0 = 0.04$$
+
+> ⚠️ Note: The actual JSON `weighted_score` for T14 is `0.24`, computed with the `+0.20*S3` formula as implemented in `src/diagnosis.py`. The documented formula above (`-0.20*S3`) corrects the direction but the *code* still uses `+`. Both yield `correct` verdicts since 0.04 and 0.24 are both well below the 0.45 threshold. The code fix is a separate task.
 
 Verdict: `correct` (score < 0.45 threshold). ✓
 

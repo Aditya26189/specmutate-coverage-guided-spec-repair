@@ -176,6 +176,10 @@ This result is passed to:
 
 ## Example: T09 (clamp)
 
+**Role of the mutation engine in T09 — two separate steps:**
+1. **Diagnosis (Gate 1):** T09 is classified as `overconstrained` because the correct implementation fails the spec — this is deterministic and requires no mutation analysis.
+2. **Repair loop:** The mutation engine runs *inside* the repair loop to identify which constraint to fix. Here it scored `result == x` (FlipComparison, delta=5) as the highest-delta mutation — not `assume(lo <= x <= hi)`.
+
 **Planted spec:**
 ```python
 @given(st.integers(), st.integers(), st.integers())
@@ -184,24 +188,19 @@ def test_clamp(x, lo, hi):
     assert clamp(x, lo, hi) == x
 ```
 
-**Mutation analysis:**
-- `RemovePrecondition` on `assume(lo <= x <= hi)` → delta = 4 (exposes clamp-down and clamp-up branches)
-- `FlipComparison` on `<=` → delta = 1
-- `RemovePostcondition` on `assert clamp(x, lo, hi) == x` → delta = 0
+**Mutation analysis during repair loop (from `benchmark_results.json`):**
+- `FlipComparison` on `result == x` → **delta = 5** (exposes 5 branches: clamp-down, clamp-up, and boundary lines)
+- `RemovePrecondition` on `assume(lo <= x <= hi)` → delta not highest in this run
+- `RemovePostcondition` → delta = 0
 
-**Result:** `RemovePrecondition` wins → identified as overconstrained → repair prompt includes "Fix: `assume(lo <= x <= hi)` → too restrictive."
+**Result:** `FlipComparison` on `result == x` wins → repair prompt says "Fix: `result == x` is wrong outside the identity region." The LLM correctly inferred this means the postcondition needs to be generalized, and relaxed the assume accordingly.
 
-**Repaired spec (LLM output):**
+**Actual repaired spec (from JSON):**
 ```python
 @given(st.integers(), st.integers(), st.integers())
 def test_clamp(x, lo, hi):
     assume(lo <= hi)  # relaxed: allow any x
     result = clamp(x, lo, hi)
-    assert lo <= result <= hi
-    if x < lo:
-        assert result == lo
-    elif x > hi:
-        assert result == hi
-    else:
-        assert result == x
+    expected = max(lo, min(x, hi))
+    assert result == expected
 ```
