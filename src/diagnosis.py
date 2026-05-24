@@ -81,8 +81,8 @@ def compute_verdict(
     # (low S1/S2 = bad spec, so invert to get high = bad)
     underconstrained_signal = (
         WEIGHTS["s1"] * (1 - s1) +
-        WEIGHTS["s2"] * (1 - s2) +
-        WEIGHTS["s3"] * s3 +
+        WEIGHTS["s2"] * (1 - s2) -
+        WEIGHTS["s3"] * s3 +      # S3=1.0 = CrossHair counterexample on correct impl = overconstrained evidence
         WEIGHTS["s4"] * (1 - s4)
     )
     underconstrained_signal = round(underconstrained_signal, 4)

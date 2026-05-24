@@ -158,8 +158,6 @@ For all 5 correct tasks, S1 = 1.0 and S2 = 0.4–0.6 (from JSON), S3 = 0.5 (Cros
 **Example (T14 — from `benchmark_results.json`: S1=1.0, S2=0.6, S3=0.5, S4=1.0):**
 $$S_{under} = 0.35 \cdot 0 + 0.35 \cdot 0.4 - 0.20 \cdot 0.5 + 0.10 \cdot 0 = 0 + 0.14 - 0.10 + 0 = 0.04$$
 
-> ⚠️ Note: The actual JSON `weighted_score` for T14 is `0.24`, computed with the `+0.20*S3` formula as implemented in `src/diagnosis.py`. The documented formula above (`-0.20*S3`) corrects the direction but the *code* still uses `+`. Both yield `correct` verdicts since 0.04 and 0.24 are both well below the 0.45 threshold. The code fix is a separate task.
-
 Verdict: `correct` (score < 0.45 threshold). ✓
 
 ---
