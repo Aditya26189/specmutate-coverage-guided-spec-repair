@@ -1,7 +1,7 @@
 # src/impl_gen.py
 import json
 from src.llm import call_llm
-from templates import IMPL_GEN_PROMPT
+from src.templates import IMPL_GEN_PROMPT
 
 def generate_implementations(
     description: str,

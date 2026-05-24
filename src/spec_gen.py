@@ -1,6 +1,6 @@
 # src/spec_gen.py
 from src.llm import call_llm
-from templates import SPEC_GEN_PROMPT
+from src.templates import SPEC_GEN_PROMPT
 
 def generate_spec(description: str, function_name: str, temperature: float = 0.0) -> str:
     prompt = SPEC_GEN_PROMPT.format(

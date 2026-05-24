@@ -4,7 +4,7 @@
 
 from src.llm import call_llm
 from src.runner import run_spec_against_impl
-from templates import SPEC_GEN_PROMPT
+from src.templates import SPEC_GEN_PROMPT
 
 
 def compute_stability_score(

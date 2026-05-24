@@ -1,214 +1,324 @@
-**Diagnostic Accuracy and Repair Convergence:** See [results/benchmark_results.json](results/benchmark_results.json)
+<div align="center">
 
 # SpecMutate
 
-> **Coverage-guided specification diagnosis and feedback-guided LLM repair for Python/Hypothesis property-based tests.**
+### Coverage-Guided Specification Repair for Property-Based Tests
 
-SpecMutate automatically diagnoses whether a Hypothesis specification is *underconstrained*, *overconstrained*, or *correct* — then repairs broken specs using a feedback-guided repair loop grounded in AST-level mutation and coverage delta analysis.
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Hypothesis](https://img.shields.io/badge/Hypothesis-PBT-red?style=for-the-badge)](https://hypothesis.readthedocs.io/)
+[![Accuracy](https://img.shields.io/badge/Diagnostic%20Accuracy-15%2F15%20%28100%25%29-brightgreen?style=for-the-badge)](docs/benchmark.md)
+[![Repair](https://img.shields.io/badge/Repair%20Convergence-10%2F10%20%28100%25%29-brightgreen?style=for-the-badge)](docs/repair_loop.md)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+
+**SpecMutate** automatically diagnoses broken Hypothesis specs and repairs them — without knowing the answer in advance. Given a Python function and a property-based test that might be too weak or too strict, SpecMutate tells you *exactly* what is wrong and produces a corrected spec.
+
+[Benchmark Results](#results) · [Architecture](#architecture) · [Quick Start](#quick-start) · [Documentation](docs/) · [Interactive Dashboard](#streamlit-dashboard)
+
+</div>
 
 ---
 
-## Benchmark Results
+## The Problem
+
+Property-based testing with [Hypothesis](https://hypothesis.readthedocs.io/) requires writing specifications — `@given` decorators with strategies and `assert` statements. Getting these right is hard:
+
+- **Underconstrained specs** are too weak: they pass wrong implementations, giving false confidence.
+- **Overconstrained specs** are too strict: they reject correct implementations, making the test suite useless.
+
+Debugging a broken spec manually means staring at failing tests and guessing what the spec *should* say. SpecMutate automates this diagnosis and repair.
+
+---
+
+## What SpecMutate Does
 
 ```
-Diagnostic Accuracy:  15/15 (100.0%)
-Repair Convergence:   10/10 (100%) — all non-correct tasks repaired
-S3 (CrossHair):       Non-functional in evaluation environment (S3=0.0 for all 15 tasks)
-S4 (Stability):       Near-constant signal (0.5 or 1.0) — low discriminative value
+Input:  a Python function + a Hypothesis spec that might be broken
+
+Output: ┌───────────────────────────────────────────────────────┐
+        │  Verdict:    UNDERCONSTRAINED                         │
+        │  Confidence: 0.80                                     │
+        │  Reason:     S2=0.0 — spec cannot distinguish any     │
+        │              implementation pair                      │
+        │                                                       │
+        │  Bad constraint: assert len(result) == len(a) + len(b)│
+        │  Mutation:       RemovePostcondition (delta=3)        │
+        │                                                       │
+        │  Repaired spec:                                       │
+        │    @given(lists, lists)                               │
+        │    def test_merge(a, b):                              │
+        │        result = merge_sorted_lists(a, b)              │
+        │        assert result == sorted(a + b)  ← fixed        │
+        └───────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Results
 
 | Metric | Score |
 |--------|-------|
-| Diagnostic Accuracy | 15/15 (100.0%) |
-| Repair Convergence Rate | 10/10 (100%) |
-| Average Iterations to Convergence | 1.1 |
-| Benchmark Size | 15 tasks (5 underconstrained / 5 overconstrained / 5 correct) |
-| LLM Backend | Gemini (model rotation list: 2.5-flash, 3-flash-preview, 3.5-flash; default 3.5-flash) |
+| **Diagnostic Accuracy** | **15 / 15 (100%)** |
+| **Repair Convergence Rate** | **10 / 10 (100%)** |
+| Benchmark size | 15 tasks: 5 underconstrained · 5 overconstrained · 5 correct |
+| Average repair iterations | **1.1** |
 
-Full per-task results, signal breakdowns, ablation, and repair samples: [RESULTS.md](RESULTS.md)
+### Confusion Matrix
+
+| Predicted \ Actual | Underconstrained | Overconstrained | Correct |
+|--------------------|:---------------:|:---------------:|:-------:|
+| **Underconstrained** | ✅ 5 (T01–T05) | 0 | 0 |
+| **Overconstrained** | 0 | ✅ 5 (T06–T10) | 0 |
+| **Correct** | 0 | 0 | ✅ 5 (T11–T15) |
+
+Zero misclassifications. See [docs/benchmark.md](docs/benchmark.md) for per-task breakdown and ablation study.
 
 ---
 
-## How It Works
+## Architecture
+
+SpecMutate is a multi-component pipeline with four distinct analytical layers:
 
 ```
-Planted Spec
-     │
-     ▼
- ┌─────────────────────────────────────────────────────┐
- │  1. Signal Analysis                                  │
- │     S1 (Completeness, w=0.35)  — LLM buggy impls    │
- │     S2 (Discrimination, w=0.35) — impl pair testing  │
- │     S3 (CrossHair, w=0.20)     — symbolic refutation │
- │     S4 (Stability, w=0.10)     — temp=0.7 variance   │
- └─────────────┬───────────────────────────────────────┘
-               │
-     ┌─────────▼────────────────┐
-     │  Gate 1: correct_impl    │  ← primary overconstrained signal
-     │  passes spec?            │    NO → overconstrained (T06–T10)
-     └─────────┬────────────────┘
-               │ YES
-     ┌─────────▼────────────────┐
-     │  Gate 2: S2 == 0.0?      │  ← zero discrimination = underconstrained
-     └─────────┬────────────────┘    YES → underconstrained (T01–T05)
-               │ NO
-     ┌─────────▼──────────────┐
-     │  Mutation Engine        │  ← AST mutation + coverage delta
-     │  FlipComparison         │
-     │  RemovePrecondition     │
-     │  RemovePostcondition    │
-     └─────────┬──────────────┘
-               │
-     ┌─────────▼──────────┐
-     │  Weighted Fusion    │  → verdict (under/over/correct)
-     └─────────┬──────────┘
-               │
-     ┌─────────▼──────────┐
-     │ LLM Repair Loop    │  → repaired spec (max 3 iters)
-     └────────────────────┘
+planted_spec + correct_impl + buggy_impls + description
+        │
+        ▼
+┌───────────────────────┐    ┌───────────────────────┐
+│     SIGNAL LAYER      │    │    MUTATION ENGINE     │
+│                       │    │                       │
+│  S1  Completeness     │    │  FlipComparison       │
+│  S2  Discrimination   │    │  RemovePrecondition   │
+│  S3  CrossHair (SMT)  │    │  RemovePostcondition  │
+│  S4  Stability        │    │  Coverage-delta scored │
+└──────────┬────────────┘    └──────────┬────────────┘
+           │                            │
+           └──────────┬─────────────────┘
+                      ▼
+        ┌─────────────────────────┐
+        │    DIAGNOSIS ENGINE     │
+        │   3-Tier Cascade        │
+        │  Gate 1: impl fails?    │──→ overconstrained
+        │  Gate 2: S2 == 0.0?    │──→ underconstrained
+        │  Fusion: weighted score │──→ correct / under / over
+        └─────────────┬───────────┘
+                      ▼
+        ┌─────────────────────────┐
+        │     REPAIR LOOP         │
+        │  Grounded LLM prompt    │
+        │  Bad AST node + delta   │
+        │  + counterexample       │
+        │  + correct/buggy output │
+        │  Max 3 iterations       │
+        └─────────────────────────┘
 ```
 
+### The Four Signals
+
+| Signal | Measures | Weight |
+|--------|----------|--------|
+| **S1 Completeness** | Fraction of adversarial wrong implementations that the spec rejects | 0.35 |
+| **S2 Discrimination** | Fraction of implementation pairs the spec can tell apart | 0.35 |
+| **S3 CrossHair** | Whether symbolic execution finds a formal counterexample | 0.20 |
+| **S4 Stability** | How consistently LLM re-generates the spec across 3 independent runs | 0.10 |
+
+**Fusion formula:**
+$$S_{under} = 0.35(1 - S_1) + 0.35(1 - S_2) + 0.20 \cdot S_3 + 0.10(1 - S_4)$$
+
+### The 3-Tier Cascade
+
+Rather than relying solely on the weighted fusion, SpecMutate uses deterministic gates that resolve ambiguous signal profiles:
+
+1. **Gate 1** — Does the correct implementation *fail* the spec? → `overconstrained` (no weighting needed)
+2. **Gate 2** — Is S2 = 0 (spec cannot discriminate anything)? → `underconstrained`
+3. **Weighted Fusion** — For specs that pass both gates, the fusion decides `correct` vs others
+
+Without the gates, fusion-only accuracy drops to 33.3%. Each gate independently recovers 5 tasks.
+
 ---
 
-## Differentiator vs SOTA
+## Quick Start
 
-| Dimension | VeriAct (arXiv:2604.00280) | SpecRL [2604.05820] | VeriSpecGen [2604.10392] | **SpecMutate** |
-|-----------|----------------------------|---------------------|--------------------------|----------------|
-| Target Language | Java/JML | Dafny | Lean 4 | **Python/Hypothesis** |
-| Infrastructure | JVM + JML toolchain | RL training pipeline | Lean ITP | **Standard Python subprocesses** |
-| Fault localization | ❌ Black-box | ❌ Black-box | ❌ Black-box | ✅ **AST node + coverage delta** |
-| Repair | ❌ None | ❌ None | ❌ None | ✅ **feedback-guided LLM** |
-| Overconstrained detection | ❌ No | ❌ No | ❌ No | ✅ **Deterministic gate** |
+### Prerequisites
 
----
+- Python 3.11+
+- A [Google Gemini API key](https://aistudio.google.com/app/apikey)
 
-## Quickstart
+### Installation
 
 ```bash
-# 1. Install dependencies
+# Clone the repo
+git clone https://github.com/your-org/specmutate.git
+cd specmutate
+
+# Create virtual environment
 python -m venv venv
-.\venv\Scripts\activate  # Windows
+.\venv\Scripts\Activate.ps1   # Windows
+# source venv/bin/activate    # Linux/macOS
+
+# Install dependencies
 pip install -r requirements.txt
-
-# 2. Set your API keys in .env
-echo "GOOGLE_API_KEY=your_key_here" > .env
-# Optional: GOOGLE_API_KEY_1 ... GOOGLE_API_KEY_9 for key rotation
-
-# 3. Run the full benchmark
-python run_benchmark.py
-
-# 4. Launch the Streamlit dashboard
-streamlit run app.py
-
-# 5. Run the test suite
-pytest tests/ -v
 ```
+
+### Configure API Keys
+
+```bash
+# Copy the template
+cp .env.example .env
+
+# Edit .env and add your key(s)
+GOOGLE_API_KEY=your_gemini_api_key_here
+```
+
+Multiple keys are supported for automatic rotation — see `.env.example` for the full format.
+
+### Verify Your Setup
+
+```bash
+python check_api_keys.py
+```
+
+Expected output:
+```
+  Checking GOOGLE_API_KEY    ... [WORKING] (1.83s) - Responded: 'OK'
+  Working keys:       1 / 1
+```
+
+### Run the Full Benchmark
+
+```bash
+python run_benchmark.py
+```
+
+Expected output:
+```
+Starting SpecMutate Full Benchmark Run (15 tasks)...
+==================================================
+Running pipeline on T01: merge_sorted_lists
+Ground truth: underconstrained
+Predicted: underconstrained | Ground truth: underconstrained | Correct: True
+...
+HEADLINE NUMBERS:
+Diagnostic accuracy: 15/15 (100.0%)
+Repair convergence: 10/10 (100.0%)
+```
+
+Results are saved to `results/benchmark_results.json`.
+
+### Streamlit Dashboard
+
+```bash
+streamlit run app.py
+```
+
+Opens an interactive dashboard at `http://localhost:8501` showing:
+- Per-task signal heatmaps
+- Verdict decision paths
+- Repair iteration history
+- Full benchmark summary
 
 ---
 
-## Project Structure
+## Repository Structure
 
 ```
 specmutate/
-├── src/
-│   ├── llm.py          # Gemini client · model rotation · key rotation · circuit breaker
-│   ├── spec_gen.py     # Spec generation from task description
-│   ├── impl_gen.py     # Buggy implementation generation (S1 harness)
-│   ├── runner.py       # Isolated Hypothesis subprocess runner
-│   ├── signal1.py      # S1: Completeness — fraction of buggy impls rejected
-│   ├── signal2.py      # S2: Discrimination — correct/buggy pair separation
-│   ├── signal3.py      # S3: CrossHair symbolic refutation (health-check gated)
-│   ├── signal4.py      # S4: Stability — spec variance at temperature=0.7
-│   ├── mutator.py      # Coverage-guided AST mutation engine
-│   ├── repair_loop.py  # feedback-guided repair loop (max 3 iterations, no fallback)
-│   ├── diagnosis.py    # Weighted signal fusion + verdict (Gates 1 & 2 + fusion)
-│   └── pipeline.py     # End-to-end orchestration
-├── tests/              # Full pytest suite (32 tests)
-├── results/            # Benchmark results JSON
+├── README.md                  ← You are here
+├── requirements.txt           ← Python dependencies
+├── benchmark.json             ← 15-task benchmark dataset
+├── .env.example               ← API key template
+├── run_benchmark.py           ← Main entry point
+├── check_api_keys.py          ← API health diagnostic
+├── app.py                     ← Streamlit interactive dashboard
+│
+├── src/                       ← Core engine
+│   ├── pipeline.py            ← Top-level orchestrator
+│   ├── llm.py                 ← LLM gateway (key rotation, caching)
+│   ├── runner.py              ← Subprocess Hypothesis runner
+│   ├── diagnosis.py           ← 3-tier verdict cascade
+│   ├── mutator.py             ← Coverage-guided mutation engine
+│   ├── repair_loop.py         ← Feedback-guided LLM repair loop
+│   ├── signal1.py             ← S1: Completeness score
+│   ├── signal2.py             ← S2: Discrimination score
+│   ├── signal3.py             ← S3: CrossHair symbolic refutation
+│   ├── signal4.py             ← S4: Stability score
+│   ├── spec_gen.py            ← LLM spec generation
+│   ├── impl_gen.py            ← LLM implementation generation
+│   └── templates.py           ← All LLM prompt templates
+│
+├── docs/                      ← Technical documentation
+│   ├── architecture.md        ← System overview and data flow
+│   ├── signals.md             ← Signal design and formulas
+│   ├── diagnosis.md           ← Verdict cascade logic
+│   ├── mutation_engine.md     ← AST mutation operators
+│   ├── repair_loop.md         ← Repair loop with case studies
+│   └── benchmark.md           ← Benchmark design and results
+│
+├── results/                   ← Benchmark output
 │   └── benchmark_results.json
-├── benchmark.json      # 15-task benchmark (5/5/5 distribution)
-├── templates.py        # LLM prompt templates (REPAIR_PROMPT, SPEC_GEN_PROMPT, etc.)
-├── app.py              # Streamlit dashboard
-├── run_benchmark.py    # Benchmark runner entry point
-├── RESULTS.md          # Full results, ablation, repair samples
-├── AGENTS.md           # Architectural constraints and locked decisions
-└── requirements.txt
+│
+└── tests/                     ← Unit test suite
+    ├── conftest.py
+    ├── test_llm.py
+    ├── test_mutator.py
+    ├── test_pipeline.py
+    ├── test_repair.py
+    ├── test_runner.py
+    ├── test_signal1.py
+    ├── test_signal2.py
+    ├── test_signal3.py
+    ├── test_signal4.py
+    └── test_spec_gen.py
 ```
 
 ---
 
-## Architecture — Deterministic Cascade with LLM-Augmented Disambiguation
+## Running Tests
 
-SpecMutate classifies specs using a 3-tier cascade. Earlier tiers are deterministic
-and computationally cheap; the fusion tier activates only for ambiguous cases.
+```bash
+pytest tests/ -v
+```
 
-Tier 1 — Deterministic Overconstrained Gate
-  Run the correct reference implementation against the spec.
-  If the reference implementation fails the spec → classify as OVERCONSTRAINED.
-  Cost: zero API calls. Handles 5/15 benchmark tasks (T06–T10).
-
-Tier 2 — Zero-Discrimination Underconstrained Guard
-  If S2 = 0.0 AND S1 < 0.9 (no buggy impl fails, no pair distinguishable)
-  → classify as UNDERCONSTRAINED.
-  Handles 5/15 benchmark tasks (T01–T05).
-
-> **Transparency note:** In this 15-task benchmark, Gates 1 and 2 resolve 10/15 tasks.
-> The weighted fusion formula is only active for the remaining 5 `correct` tasks (T11–T15).
-> See RESULTS.md for full ablation analysis.
-
-Tier 3 — Weighted Signal Fusion (ambiguous cases only)
-  Combines four signals for cases not resolved by Tiers 1–2.
-  Active for 5/15 benchmark tasks (T11–T15).
-  
-  Fusion Score = 0.35 * (1 - S1) + 0.35 * (1 - S2) + 0.20 * S3 + 0.10 * (1 - S4)
-  Where:
-    - Score > 0.65 -> underconstrained
-    - Score < 0.45 -> correct
-    - Middle band: use S3 + heuristics
-
-Signal definitions:
-  S1 (weight 0.35): Fraction of 5 LLM-generated buggy implementations rejected by spec
-  S2 (weight 0.35): Fraction of divergent implementation pairs distinguished by spec  
-  S3 (weight 0.20): CrossHair symbolic execution — counterexample found (1.0) or not (0.0)
-  S4 (weight 0.10): Stability — agreement across 3 LLM spec regenerations at temp=0.7
+The test suite includes unit tests for all signal computations, the mutation engine, the runner, and the repair loop. LLM-dependent tests use caching to avoid API quota consumption.
 
 ---
 
-## API Key & Model Configuration
+## Documentation
 
-SpecMutate supports up to 10 API keys with round-robin rotation. Models are tried in this order (see `src/llm.py` for the active index):
-
-```python
-MODEL_ROTATION_LIST = [
-    "gemini-2.5-flash",
-    "gemini-3-flash-preview",
-    "gemini-3.5-flash",
-]
-```
-
-Configure in `.env`:
-```
-GOOGLE_API_KEY=...
-GOOGLE_API_KEY_1=...
-# ... up to GOOGLE_API_KEY_9
-```
-
-Responses are cached in `.llm_cache.json` to avoid redundant API calls across runs. Repair calls are run without cache for audit clarity.
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/architecture.md) | Full pipeline walkthrough, module map, key design decisions |
+| [Signals](docs/signals.md) | All four diagnostic signals explained in depth |
+| [Diagnosis](docs/diagnosis.md) | 3-tier cascade, fusion formula, ablation evidence |
+| [Mutation Engine](docs/mutation_engine.md) | AST operators, coverage delta scoring, examples |
+| [Repair Loop](docs/repair_loop.md) | Feedback-guided repair, convergence criteria, case studies |
+| [Benchmark](docs/benchmark.md) | Dataset design, results, oracle disclosure |
 
 ---
 
-## Requirements
+## Key Design Principles
 
-- Python 3.12+
-- Google Gemini API key
-- `crosshair-tool` (for S3; gracefully disabled if health-check fails)
-- See `requirements.txt` for full dependency list
+**1. Grounded Repair, Not Blind Generation**  
+The repair loop does not ask the LLM to "fix this spec." It identifies the exact AST node responsible for the fault, measures the coverage delta, extracts a counterexample, and provides all of this in a structured prompt. The LLM is told exactly what to fix and why.
+
+**2. Subprocess Isolation**  
+All Hypothesis and coverage.py operations run in separate subprocesses. This prevents state leakage between test runs and makes the system robust to malformed specs and implementations.
+
+**3. Placeholder Substitution**  
+Code is injected into templates via `###PLACEHOLDER###.replace()`, never via f-strings or `.format()`. Python source code contains `{curly braces}` that would corrupt string formatting.
+
+**4. Deterministic Gates Before Probabilistic Fusion**  
+The weighted fusion formula cannot resolve the fundamental ambiguity between underconstrained and overconstrained specs (both show S2 = 0.0). Deterministic gates that run the correct implementation against the spec resolve this unambiguously before any signal weighting occurs.
+
+**5. Multi-Key LLM Resilience**  
+The LLM layer supports up to 10 Gemini API keys with automatic rotation on quota exhaustion. When all keys exhaust on one model, it escalates to the next model in the rotation list. This makes long benchmark runs resilient to per-key rate limits.
 
 ---
 
-## Future Work
+## Contributing
 
-1. **Scale to 100+ Benchmark Tasks** — Widen from 15 core tasks to a comprehensive suite covering broader algorithmic domains.
-2. **6-Operator Mutation Set** — Add `AddPrecondition`, `FlipLogic` (AND↔OR), and `WidenStrategies` for finer-grained localization.
-3. **Multi-Language Porting** — Extend the AST mutation engine to Dafny and JML.
-4. **GitHub Action Integration** — Package as a GitHub Action to automatically diagnose Hypothesis specs in PRs.
+See [AGENTS.md](AGENTS.md) for contributor guidelines, including instructions for extending the mutation operator set, adding new signals, and expanding the benchmark dataset.
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.

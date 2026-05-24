@@ -11,7 +11,7 @@ from src.signal1 import compute_completeness_score
 from src.signal2 import compute_discrimination_score
 from src.signal4 import compute_stability_score
 from src.mutator import identify_bad_constraint
-from templates import REPAIR_PROMPT
+from src.templates import REPAIR_PROMPT
 
 
 def get_output_on_counterexample(impl_code: str, func_name: str, counterexample_str: str) -> str:

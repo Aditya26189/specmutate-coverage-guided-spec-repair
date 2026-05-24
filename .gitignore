@@ -1,12 +1,39 @@
-.env
-venv/
+# Python
 __pycache__/
-.pytest_cache/
-.coverage
-.hypothesis/
 *.pyc
 *.pyo
+*.pyd
+.Python
 
-problem_statement.md
-specmutate_final.md
-AGENTS.md
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Environment / secrets
+.env
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+
+# LLM cache (committed intentionally for reproducibility — remove to re-run from scratch)
+# .llm_cache.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
