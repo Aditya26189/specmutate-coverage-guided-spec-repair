@@ -85,6 +85,7 @@ def compute_verdict(
         WEIGHTS["s3"] * s3 +
         WEIGHTS["s4"] * (1 - s4)
     )
+    underconstrained_signal = round(underconstrained_signal, 4)
 
     confidence = s4  # stability = confidence in diagnosis
 

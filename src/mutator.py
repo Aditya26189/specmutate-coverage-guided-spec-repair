@@ -77,73 +77,170 @@ def _measure_coverage(impl: str, spec: str, timeout: int = 15) -> set:
         Path(tmp).unlink(missing_ok=True)
 
 
-def _flip_comparisons(spec: str) -> list[dict]:
-    """FlipComparison: flip >, <, >=, <=, ==, != in assert statements."""
-    mutations = []
-    flips = {">": ">=", ">=": ">", "<": "<=", "<=": "<", "==": "!=", "!=": "=="}
+OP_MAP = {
+    ast.Eq: ast.NotEq,
+    ast.NotEq: ast.Eq,
+    ast.Lt: ast.LtE,
+    ast.LtE: ast.Lt,
+    ast.Gt: ast.GtE,
+    ast.GtE: ast.Gt
+}
 
-    for original, replacement in flips.items():
-        pattern = rf'assert\s+.*{re.escape(original)}'
-        for match in re.finditer(pattern, spec):
-            mutated = spec[:match.start()] + \
-                      match.group().replace(original, replacement, 1) + \
-                      spec[match.end():]
-            mutations.append({
-                "operator": "FlipComparison",
-                "original": match.group(),
-                "mutated": match.group().replace(original, replacement, 1),
-                "mutated_spec": mutated
-            })
+class FlipComparisonTransformer(ast.NodeTransformer):
+    def __init__(self, target_index: int):
+        self.target_index = target_index
+        self.current_index = 0
+        self.original_node_str = ""
+        self.mutated_node_str = ""
+
+    def visit_Compare(self, node):
+        if node.ops and type(node.ops[0]) in OP_MAP:
+            if self.current_index == self.target_index:
+                self.original_node_str = ast.unparse(node)
+                op_type = type(node.ops[0])
+                new_op = OP_MAP[op_type]()
+                new_node = ast.Compare(
+                    left=node.left,
+                    ops=[new_op] + node.ops[1:],
+                    comparators=node.comparators
+                )
+                self.mutated_node_str = ast.unparse(new_node)
+                self.current_index += 1
+                return new_node
+            self.current_index += 1
+        return self.generic_visit(node)
+
+
+class RemovePreconditionTransformer(ast.NodeTransformer):
+    def __init__(self, target_index: int):
+        self.target_index = target_index
+        self.current_index = 0
+        self.original_node_str = ""
+        self.mutated_node_str = ""
+
+    def visit_Call(self, node):
+        # 1. Check if it is assume(...) call
+        if isinstance(node.func, ast.Name) and node.func.id == "assume":
+            if self.current_index == self.target_index:
+                self.original_node_str = ast.unparse(node)
+                self.mutated_node_str = "pass"
+                self.current_index += 1
+                return ast.Pass()
+            self.current_index += 1
+
+        # 2. Check strategy keyword arguments like min_value or min_size
+        new_keywords = []
+        modified = False
+        for kw in node.keywords:
+            if kw.arg in ("min_value", "min_size"):
+                if self.current_index == self.target_index:
+                    self.original_node_str = f"{kw.arg}={ast.unparse(kw.value)}"
+                    self.mutated_node_str = f"{kw.arg}=0"
+                    new_kw = ast.keyword(arg=kw.arg, value=ast.Constant(value=0))
+                    new_keywords.append(new_kw)
+                    modified = True
+                    self.current_index += 1
+                    continue
+                self.current_index += 1
+            new_keywords.append(kw)
+
+        if modified:
+            new_node = ast.Call(
+                func=node.func,
+                args=node.args,
+                keywords=new_keywords
+            )
+            return new_node
+
+        return self.generic_visit(node)
+
+
+class RemovePostconditionTransformer(ast.NodeTransformer):
+    def __init__(self, target_index: int):
+        self.target_index = target_index
+        self.current_index = 0
+        self.original_node_str = ""
+        self.mutated_node_str = ""
+
+    def visit_Assert(self, node):
+        if self.current_index == self.target_index:
+            self.original_node_str = ast.unparse(node)
+            self.mutated_node_str = "pass"
+            self.current_index += 1
+            return ast.Pass()
+        self.current_index += 1
+        return self.generic_visit(node)
+
+
+def _flip_comparisons(spec: str) -> list[dict]:
+    mutations = []
+    target_index = 0
+    while True:
+        try:
+            tree = ast.parse(spec)
+        except SyntaxError:
+            break
+        transformer = FlipComparisonTransformer(target_index)
+        mutated_tree = transformer.visit(tree)
+        if transformer.original_node_str == "":
+            break
+        ast.fix_missing_locations(mutated_tree)
+        mutated_spec = ast.unparse(mutated_tree)
+        mutations.append({
+            "operator": "FlipComparison",
+            "original": transformer.original_node_str,
+            "mutated": transformer.mutated_node_str,
+            "mutated_spec": mutated_spec
+        })
+        target_index += 1
     return mutations
 
 
 def _remove_preconditions(spec: str) -> list[dict]:
-    """RemovePrecondition: remove assume() calls and min/max value restrictions."""
     mutations = []
-
-    # Remove assume() lines
-    for line in spec.split("\n"):
-        if "assume(" in line:
-            mutated = spec.replace(line + "\n", "").replace(line, "")
-            mutations.append({
-                "operator": "RemovePrecondition",
-                "original": line,
-                "mutated": "",
-                "mutated_spec": mutated
-            })
-
-    # Widen min_value/max_value in @given strategies
-    for pattern, replacement in [
-        (r'min_value=\d+', 'min_value=0'),
-        (r'min_size=\d+', 'min_size=0'),
-    ]:
-        for match in re.finditer(pattern, spec):
-            if match.group() != replacement:
-                mutated = spec[:match.start()] + replacement + spec[match.end():]
-                mutations.append({
-                    "operator": "RemovePrecondition",
-                    "original": match.group(),
-                    "mutated": replacement,
-                    "mutated_spec": mutated
-                })
+    target_index = 0
+    while True:
+        try:
+            tree = ast.parse(spec)
+        except SyntaxError:
+            break
+        transformer = RemovePreconditionTransformer(target_index)
+        mutated_tree = transformer.visit(tree)
+        if transformer.original_node_str == "":
+            break
+        ast.fix_missing_locations(mutated_tree)
+        mutated_spec = ast.unparse(mutated_tree)
+        mutations.append({
+            "operator": "RemovePrecondition",
+            "original": transformer.original_node_str,
+            "mutated": transformer.mutated_node_str,
+            "mutated_spec": mutated_spec
+        })
+        target_index += 1
     return mutations
 
 
 def _remove_postconditions(spec: str) -> list[dict]:
-    """RemovePostcondition: remove individual assert statements."""
     mutations = []
-    lines = spec.split("\n")
-
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped.startswith("assert "):
-            remaining = "\n".join(lines[:i] + lines[i+1:])
-            mutations.append({
-                "operator": "RemovePostcondition",
-                "original": stripped,
-                "mutated": "",
-                "mutated_spec": remaining
-            })
+    target_index = 0
+    while True:
+        try:
+            tree = ast.parse(spec)
+        except SyntaxError:
+            break
+        transformer = RemovePostconditionTransformer(target_index)
+        mutated_tree = transformer.visit(tree)
+        if transformer.original_node_str == "":
+            break
+        ast.fix_missing_locations(mutated_tree)
+        mutated_spec = ast.unparse(mutated_tree)
+        mutations.append({
+            "operator": "RemovePostcondition",
+            "original": transformer.original_node_str,
+            "mutated": transformer.mutated_node_str,
+            "mutated_spec": mutated_spec
+        })
+        target_index += 1
     return mutations
 
 

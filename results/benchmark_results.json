@@ -12,35 +12,44 @@
       "predicted": "underconstrained",
       "correct_diagnosis": true,
       "signals": {
-        "s1": 0.6,
+        "s1": 0.0,
         "s2": 0.0,
-        "s3": 0.0,
+        "s3": 0.5,
         "s4": 1.0
       },
       "diagnosis": {
         "verdict": "underconstrained",
-        "confidence": 0.4,
+        "confidence": 1.0,
         "weighted_score": 1.0,
         "signal_breakdown": {
-          "s1": 0.6,
+          "s1": 0.0,
           "s2": 0.0,
-          "s3": 0.0,
+          "s3": 0.5,
           "s4": 1.0
         }
       },
       "repair": {
         "converged": true,
         "iterations": 1,
-        "final_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10),\n       st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10))\ndef test_merge_sorted_lists(a, b):\n    a_sorted = sorted(a)\n    b_sorted = sorted(b)\n    result = merge_sorted_lists(a_sorted, b_sorted)\n    assert len(result) == len(a_sorted) + len(b_sorted)\n    assert result == sorted(a_sorted + b_sorted)",
+        "final_spec": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10),\n       st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10))\ndef test_merge_sorted_lists(a, b):\n    a_sorted = sorted(a)\n    b_sorted = sorted(b)\n    result = merge_sorted_lists(a_sorted, b_sorted)\n    assert result == sorted(a_sorted + b_sorted)",
         "history": [
           {
             "iteration": 1,
-            "s1_score": 0.6,
-            "s2_score": 0.6,
+            "s1_score": 0.0,
+            "s2_score": 0.0,
             "s4_score": 1.0,
-            "bad_constraint": null,
+            "bad_constraint": {
+              "operator": "FlipComparison",
+              "original": "len(result) == len(a) + len(b)",
+              "mutated": "len(result) != len(a) + len(b)",
+              "mutated_spec": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10), st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10))\ndef test_merge_sorted_lists(a, b):\n    a_sorted = sorted(a)\n    b_sorted = sorted(b)\n    result = merge_sorted_lists(a_sorted, b_sorted)\n    assert len(result) != len(a) + len(b)",
+              "coverage_delta": 1,
+              "newly_covered_lines": [
+                25
+              ]
+            },
             "counterexample": "Buggy impl passes spec: def merge_sorted_lists(a: list[int], b: list[int]) -> list[int]:\n    return a + b",
-            "repaired_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10),\n       st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10))\ndef test_merge_sorted_lists(a, b):\n    a_sorted = sorted(a)\n    b_sorted = sorted(b)\n    result = merge_sorted_lists(a_sorted, b_sorted)\n    assert len(result) == len(a_sorted) + len(b_sorted)\n    assert result == sorted(a_sorted + b_sorted)",
+            "repaired_spec": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10),\n       st.lists(st.integers(min_value=-1000, max_value=1000), max_size=10))\ndef test_merge_sorted_lists(a, b):\n    a_sorted = sorted(a)\n    b_sorted = sorted(b)\n    result = merge_sorted_lists(a_sorted, b_sorted)\n    assert result == sorted(a_sorted + b_sorted)",
             "converged": true
           }
         ],
@@ -53,35 +62,44 @@
       "predicted": "underconstrained",
       "correct_diagnosis": true,
       "signals": {
-        "s1": 0.2,
+        "s1": 0.0,
         "s2": 0.0,
-        "s3": 0.0,
+        "s3": 0.5,
         "s4": 1.0
       },
       "diagnosis": {
         "verdict": "underconstrained",
-        "confidence": 0.8,
+        "confidence": 1.0,
         "weighted_score": 1.0,
         "signal_breakdown": {
-          "s1": 0.2,
+          "s1": 0.0,
           "s2": 0.0,
-          "s3": 0.0,
+          "s3": 0.5,
           "s4": 1.0
         }
       },
       "repair": {
         "converged": true,
         "iterations": 1,
-        "final_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=15), st.integers(min_value=-1000, max_value=1000))\ndef test_binary_search(lst, target):\n    lst_sorted = sorted(lst)\n    result = binary_search(lst_sorted, target)\n    assert -1 <= result < len(lst_sorted)\n    if result != -1:\n        assert lst_sorted[result] == target\n    if target in lst_sorted:\n        assert result != -1\n    if target not in lst_sorted:\n        assert result == -1",
+        "final_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=15), st.integers(min_value=-1000, max_value=1000))\ndef test_binary_search(lst, target):\n    lst_sorted = sorted(lst)\n    result = binary_search(lst_sorted, target)\n    if target in lst_sorted:\n        assert 0 <= result < len(lst_sorted)\n        assert lst_sorted[result] == target\n    else:\n        assert result == -1",
         "history": [
           {
             "iteration": 1,
-            "s1_score": 0.2,
-            "s2_score": 0.2,
+            "s1_score": 0.0,
+            "s2_score": 0.0,
             "s4_score": 1.0,
-            "bad_constraint": null,
+            "bad_constraint": {
+              "operator": "FlipComparison",
+              "original": "-1 <= result < len(lst_sorted) + 1",
+              "mutated": "-1 < result < len(lst_sorted) + 1",
+              "mutated_spec": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=15), st.integers(min_value=-1000, max_value=1000))\ndef test_binary_search(lst, target):\n    lst_sorted = sorted(lst)\n    result = binary_search(lst_sorted, target)\n    assert -1 < result < len(lst_sorted) + 1",
+              "coverage_delta": 1,
+              "newly_covered_lines": [
+                26
+              ]
+            },
             "counterexample": "Buggy impl passes spec: def binary_search(lst: list[int], target: int) -> int:\n    return 0 if lst and lst[0] == target else",
-            "repaired_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=15), st.integers(min_value=-1000, max_value=1000))\ndef test_binary_search(lst, target):\n    lst_sorted = sorted(lst)\n    result = binary_search(lst_sorted, target)\n    assert -1 <= result < len(lst_sorted)\n    if result != -1:\n        assert lst_sorted[result] == target\n    if target in lst_sorted:\n        assert result != -1\n    if target not in lst_sorted:\n        assert result == -1",
+            "repaired_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-1000, max_value=1000), max_size=15), st.integers(min_value=-1000, max_value=1000))\ndef test_binary_search(lst, target):\n    lst_sorted = sorted(lst)\n    result = binary_search(lst_sorted, target)\n    if target in lst_sorted:\n        assert 0 <= result < len(lst_sorted)\n        assert lst_sorted[result] == target\n    else:\n        assert result == -1",
             "converged": true
           }
         ],
@@ -96,8 +114,8 @@
       "signals": {
         "s1": 0.0,
         "s2": 0.0,
-        "s3": 0.0,
-        "s4": 0.5
+        "s3": 0.5,
+        "s4": 1.0
       },
       "diagnosis": {
         "verdict": "underconstrained",
@@ -106,23 +124,32 @@
         "signal_breakdown": {
           "s1": 0.0,
           "s2": 0.0,
-          "s3": 0.0,
-          "s4": 0.5
+          "s3": 0.5,
+          "s4": 1.0
         }
       },
       "repair": {
         "converged": true,
         "iterations": 1,
-        "final_spec": "from hypothesis import given, strategies as st\n\ndef _get_expected_result(lst):\n    seen = set()\n    expected = []\n    for x in lst:\n        if x not in seen:\n            expected.append(x)\n            seen.add(x)\n    return expected\n\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15))\ndef test_remove_duplicates(lst):\n    result = remove_duplicates(lst)\n    expected_result = _get_expected_result(lst)\n    assert result == expected_result",
+        "final_spec": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15))\ndef test_remove_duplicates(lst):\n    result = remove_duplicates(lst)\n    expected = []\n    seen = set()\n    for x in lst:\n        if x not in seen:\n            seen.add(x)\n            expected.append(x)\n    assert result == expected",
         "history": [
           {
             "iteration": 1,
             "s1_score": 0.0,
             "s2_score": 0.0,
-            "s4_score": 0.5,
-            "bad_constraint": null,
+            "s4_score": 1.0,
+            "bad_constraint": {
+              "operator": "FlipComparison",
+              "original": "len(result) == len(set(result))",
+              "mutated": "len(result) != len(set(result))",
+              "mutated_spec": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15))\ndef test_remove_duplicates(lst):\n    result = remove_duplicates(lst)\n    assert len(result) != len(set(result))",
+              "coverage_delta": 1,
+              "newly_covered_lines": [
+                22
+              ]
+            },
             "counterexample": "Buggy impl passes spec: def remove_duplicates(lst: list[int]) -> list[int]:\n    return sorted(list(set(lst)))",
-            "repaired_spec": "from hypothesis import given, strategies as st\n\ndef _get_expected_result(lst):\n    seen = set()\n    expected = []\n    for x in lst:\n        if x not in seen:\n            expected.append(x)\n            seen.add(x)\n    return expected\n\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15))\ndef test_remove_duplicates(lst):\n    result = remove_duplicates(lst)\n    expected_result = _get_expected_result(lst)\n    assert result == expected_result",
+            "repaired_spec": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15))\ndef test_remove_duplicates(lst):\n    result = remove_duplicates(lst)\n    expected = []\n    seen = set()\n    for x in lst:\n        if x not in seen:\n            seen.add(x)\n            expected.append(x)\n    assert result == expected",
             "converged": true
           }
         ],
@@ -137,8 +164,8 @@
       "signals": {
         "s1": 0.0,
         "s2": 0.0,
-        "s3": 0.0,
-        "s4": 1.0
+        "s3": 0.5,
+        "s4": 0.0
       },
       "diagnosis": {
         "verdict": "underconstrained",
@@ -147,23 +174,32 @@
         "signal_breakdown": {
           "s1": 0.0,
           "s2": 0.0,
-          "s3": 0.0,
-          "s4": 1.0
+          "s3": 0.5,
+          "s4": 0.0
         }
       },
       "repair": {
         "converged": true,
         "iterations": 1,
-        "final_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15), st.integers(min_value=0, max_value=50))\ndef test_rotate_list(lst, k):\n    result = rotate_list(lst, k)\n    assert len(result) == len(lst)\n    if not lst:\n        assert result == []\n    else:\n        effective_k = k % len(lst)\n        expected_result = lst[-effective_k:] + lst[:-effective_k]\n        assert result == expected_result",
+        "final_spec": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15), st.integers(min_value=0, max_value=50))\ndef test_rotate_list(lst, k):\n    result = rotate_list(lst, k)\n    if not lst:\n        assert result == []\n    else:\n        shift = k % len(lst)\n        expected = lst[-shift:] + lst[:-shift] if shift > 0 else lst\n        assert result == expected",
         "history": [
           {
             "iteration": 1,
             "s1_score": 0.0,
             "s2_score": 0.0,
             "s4_score": 1.0,
-            "bad_constraint": null,
+            "bad_constraint": {
+              "operator": "FlipComparison",
+              "original": "len(result) == len(lst)",
+              "mutated": "len(result) != len(lst)",
+              "mutated_spec": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15), st.integers(min_value=0, max_value=50))\ndef test_rotate_list(lst, k):\n    result = rotate_list(lst, k)\n    assert len(result) != len(lst)",
+              "coverage_delta": 1,
+              "newly_covered_lines": [
+                19
+              ]
+            },
             "counterexample": "Buggy impl passes spec: def rotate_list(lst: list[int], k: int) -> list[int]:\n    return lst",
-            "repaired_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15), st.integers(min_value=0, max_value=50))\ndef test_rotate_list(lst, k):\n    result = rotate_list(lst, k)\n    assert len(result) == len(lst)\n    if not lst:\n        assert result == []\n    else:\n        effective_k = k % len(lst)\n        expected_result = lst[-effective_k:] + lst[:-effective_k]\n        assert result == expected_result",
+            "repaired_spec": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.integers(min_value=-100, max_value=100), max_size=15), st.integers(min_value=0, max_value=50))\ndef test_rotate_list(lst, k):\n    result = rotate_list(lst, k)\n    if not lst:\n        assert result == []\n    else:\n        shift = k % len(lst)\n        expected = lst[-shift:] + lst[:-shift] if shift > 0 else lst\n        assert result == expected",
             "converged": true
           }
         ],
@@ -176,35 +212,44 @@
       "predicted": "underconstrained",
       "correct_diagnosis": true,
       "signals": {
-        "s1": 0.2,
+        "s1": 0.0,
         "s2": 0.0,
-        "s3": 0.0,
+        "s3": 0.5,
         "s4": 1.0
       },
       "diagnosis": {
         "verdict": "underconstrained",
-        "confidence": 0.8,
+        "confidence": 1.0,
         "weighted_score": 1.0,
         "signal_breakdown": {
-          "s1": 0.2,
+          "s1": 0.0,
           "s2": 0.0,
-          "s3": 0.0,
+          "s3": 0.5,
           "s4": 1.0
         }
       },
       "repair": {
         "converged": true,
         "iterations": 1,
-        "final_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.lists(st.integers(min_value=-100, max_value=100), max_size=5), max_size=5))\ndef test_flatten_nested(lst):\n    result = flatten_nested(lst)\n    expected_flat_list = [item for sublist in lst for item in sublist]\n    assert result == expected_flat_list",
+        "final_spec": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.lists(st.integers(min_value=-100, max_value=100), max_size=5), max_size=5))\ndef test_flatten_nested(lst):\n    result = flatten_nested(lst)\n    expected = [item for sublist in lst for item in sublist]\n    assert result == expected",
         "history": [
           {
             "iteration": 1,
-            "s1_score": 0.2,
-            "s2_score": 0.2,
+            "s1_score": 0.0,
+            "s2_score": 0.0,
             "s4_score": 1.0,
-            "bad_constraint": null,
+            "bad_constraint": {
+              "operator": "FlipComparison",
+              "original": "len(result) == sum((len(sub) for sub in lst))",
+              "mutated": "len(result) != sum((len(sub) for sub in lst))",
+              "mutated_spec": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.lists(st.integers(min_value=-100, max_value=100), max_size=5), max_size=5))\ndef test_flatten_nested(lst):\n    result = flatten_nested(lst)\n    assert len(result) != sum((len(sub) for sub in lst))",
+              "coverage_delta": 1,
+              "newly_covered_lines": [
+                19
+              ]
+            },
             "counterexample": "Buggy impl passes spec: def flatten_nested(lst: list[list[int]]) -> list[int]:\n    return [1] * sum(len(sub) for sub in lst)",
-            "repaired_spec": "from hypothesis import given, strategies as st\n@given(st.lists(st.lists(st.integers(min_value=-100, max_value=100), max_size=5), max_size=5))\ndef test_flatten_nested(lst):\n    result = flatten_nested(lst)\n    expected_flat_list = [item for sublist in lst for item in sublist]\n    assert result == expected_flat_list",
+            "repaired_spec": "from hypothesis import given, strategies as st\n\n@given(st.lists(st.lists(st.integers(min_value=-100, max_value=100), max_size=5), max_size=5))\ndef test_flatten_nested(lst):\n    result = flatten_nested(lst)\n    expected = [item for sublist in lst for item in sublist]\n    assert result == expected",
             "converged": true
           }
         ],
@@ -219,34 +264,43 @@
       "signals": {
         "s1": 0.0,
         "s2": 0.0,
-        "s3": 0.0,
-        "s4": 0.5
+        "s3": 0.5,
+        "s4": 1.0
       },
       "diagnosis": {
         "verdict": "overconstrained",
-        "confidence": 0.5,
+        "confidence": 1.0,
         "weighted_score": 0.0,
         "signal_breakdown": {
           "s1": 0.0,
           "s2": 0.0,
-          "s3": 0.0,
-          "s4": 0.5
+          "s3": 0.5,
+          "s4": 1.0
         },
         "overconstrained_via": "correct_impl_fails_spec"
       },
       "repair": {
         "converged": true,
         "iterations": 1,
-        "final_spec": "import math\nfrom hypothesis import given, strategies as st\n\n@given(st.integers(min_value=0, max_value=10))\ndef test_factorial(n):\n    result = factorial(n)\n    assert result == math.factorial(n)",
+        "final_spec": "import math\nfrom hypothesis import given, strategies as st\n\n@given(st.integers(min_value=0, max_value=20))\ndef test_factorial(n):\n    assert factorial(n) == math.factorial(n)",
         "history": [
           {
             "iteration": 1,
             "s1_score": 0.0,
             "s2_score": 0.0,
-            "s4_score": 0.5,
-            "bad_constraint": null,
+            "s4_score": 1.0,
+            "bad_constraint": {
+              "operator": "FlipComparison",
+              "original": "result > 0",
+              "mutated": "result >= 0",
+              "mutated_spec": "from hypothesis import given, strategies as st\n\n@given(st.integers(min_value=1, max_value=10))\ndef test_factorial(n):\n    result = factorial(n)\n    assert result >= 0\n    assert result > n",
+              "coverage_delta": 1,
+              "newly_covered_lines": [
+                18
+              ]
+            },
             "counterexample": "Falsifying example: test_factorial(\n    n=1,\n)",
-            "repaired_spec": "import math\nfrom hypothesis import given, strategies as st\n\n@given(st.integers(min_value=0, max_value=10))\ndef test_factorial(n):\n    result = factorial(n)\n    assert result == math.factorial(n)",
+            "repaired_spec": "import math\nfrom hypothesis import given, strategies as st\n\n@given(st.integers(min_value=0, max_value=20))\ndef test_factorial(n):\n    assert factorial(n) == math.factorial(n)",
             "converged": true
           }
         ],
@@ -259,9 +313,9 @@
       "predicted": "overconstrained",
       "correct_diagnosis": true,
       "signals": {
-        "s1": 0.6,
+        "s1": 0.0,
         "s2": 0.0,
-        "s3": 0.0,
+        "s3": 0.5,
         "s4": 1.0
       },
       "diagnosis": {
@@ -269,9 +323,9 @@
         "confidence": 1.0,
         "weighted_score": 0.0,
         "signal_breakdown": {
-          "s1": 0.6,
+          "s1": 0.0,
           "s2": 0.0,
-          "s3": 0.0,
+          "s3": 0.5,
           "s4": 1.0
         },
         "overconstrained_via": "correct_impl_fails_spec"
@@ -279,16 +333,26 @@
       "repair": {
         "converged": true,
         "iterations": 1,
-        "final_spec": "from hypothesis import given, strategies as st, assume\n\n@given(st.integers(min_value=-100, max_value=100), st.integers(min_value=-100, max_value=100))\ndef test_gcd(a, b):\n    result = gcd(a, b)\n\n    assert result >= 0\n\n    if a == 0 and b == 0:\n        assert result == 0\n    else:\n        assert result > 0\n        assert a % result == 0\n        assert b % result == 0\n\n    assert gcd(b, a) == result\n\n    assert gcd(abs(a), abs(b)) == result",
+        "final_spec": "from hypothesis import given, strategies as st\nimport math\n\n@given(st.integers(min_value=-100, max_value=100), st.integers(min_value=-100, max_value=100))\ndef test_gcd(a, b):\n    result = gcd(a, b)\n    assert result == math.gcd(a, b)",
         "history": [
           {
             "iteration": 1,
-            "s1_score": 0.6,
-            "s2_score": 0.6,
+            "s1_score": 0.0,
+            "s2_score": 0.0,
             "s4_score": 1.0,
-            "bad_constraint": null,
-            "counterexample": "Falsifying example: test_gcd(\n    a=-1,\n    b=1,\n)",
-            "repaired_spec": "from hypothesis import given, strategies as st, assume\n\n@given(st.integers(min_value=-100, max_value=100), st.integers(min_value=-100, max_value=100))\ndef test_gcd(a, b):\n    result = gcd(a, b)\n\n    assert result >= 0\n\n    if a == 0 and b == 0:\n        assert result == 0\n    else:\n        assert result > 0\n        assert a % result == 0\n        assert b % result == 0\n\n    assert gcd(b, a) == result\n\n    assert gcd(abs(a), abs(b)) == result",
+            "bad_constraint": {
+              "operator": "RemovePrecondition",
+              "original": "assume(a != 0)",
+              "mutated": "pass",
+              "mutated_spec": "from hypothesis import given, strategies as st, assume\n\n@given(st.integers(min_value=-100, max_value=100), st.integers(min_value=-100, max_value=100))\ndef test_gcd(a, b):\n    \n    pass\n    assume(b != 0)\n    result = gcd(a, b)\n    assert result > 1",
+              "coverage_delta": 2,
+              "newly_covered_lines": [
+                19,
+                20
+              ]
+            },
+            "counterexample": "Falsifying example: test_gcd(\n    a=1,\n    b=1,\n)",
+            "repaired_spec": "from hypothesis import given, strategies as st\nimport math\n\n@given(st.integers(min_value=-100, max_value=100), st.integers(min_value=-100, max_value=100))\ndef test_gcd(a, b):\n    result = gcd(a, b)\n    assert result == math.gcd(a, b)",
             "converged": true
           }
         ],
@@ -303,7 +367,7 @@
       "signals": {
         "s1": 1.0,
         "s2": 0.0,
-        "s3": 0.0,
+        "s3": 0.5,
         "s4": 1.0
       },
       "diagnosis": {
@@ -313,44 +377,44 @@
         "signal_breakdown": {
           "s1": 1.0,
           "s2": 0.0,
-          "s3": 0.0,
+          "s3": 0.5,
           "s4": 1.0
         },
         "overconstrained_via": "correct_impl_fails_spec"
       },
       "repair": {
         "converged": true,
-        "iterations": 3,
-        "final_spec": "from hypothesis import given, strategies as st\n\n@given(st.text(min_size=1, max_size=20))\ndef test_is_palindrome(s):\n    def _clean_for_palindrome(text):\n        cleaned_chars = []\n        for char in text:\n            if char.isalnum():\n                cleaned_chars.append(char.lower())\n        return \"\".join(cleaned_chars)\n\n    result = is_palindrome(s)\n    \n    cleaned_s = _clean_for_palindrome(s)\n    expected_result = (cleaned_s == cleaned_s[::-1])\n    \n    assert result == expected_result",
+        "iterations": 2,
+        "final_spec": "from hypothesis import given, strategies as st\n\n@given(st.text(max_size=20))\ndef test_is_palindrome(s):\n    cleaned = \"\".join(c.lower() for c in s if c.isalnum())\n    assert is_palindrome(s) == (cleaned == cleaned[::-1])",
         "history": [
           {
             "iteration": 1,
             "s1_score": 1.0,
             "s2_score": 1.0,
             "s4_score": 1.0,
-            "bad_constraint": null,
-            "counterexample": "Falsifying example: test_is_palindrome(\n    s='ab',\n)",
-            "repaired_spec": "from hypothesis import given, strategies as st\n\n@given(st.text(min_size=1, max_size=20))\ndef test_is_palindrome(s):\n    result = is_palindrome(s)\n    expected_result = (s == s[::-1])\n    assert result == expected_result",
+            "bad_constraint": {
+              "operator": "RemovePrecondition",
+              "original": "assume(s.isalpha() and s.islower())",
+              "mutated": "pass",
+              "mutated_spec": "from hypothesis import given, strategies as st, assume\n\n@given(st.text(min_size=1, max_size=20))\ndef test_is_palindrome(s):\n    \n    pass\n    result = is_palindrome(s)\n    assert result is True",
+              "coverage_delta": 2,
+              "newly_covered_lines": [
+                18,
+                19
+              ]
+            },
+            "counterexample": "Falsifying example: test_is_palindrome(\n    s='aab',\n)",
+            "repaired_spec": "from hypothesis import given, strategies as st\n\n@given(st.text(max_size=20))\ndef test_is_palindrome(s):\n    result = is_palindrome(s)\n    assert result == (s == s[::-1])",
             "converged": false
           },
           {
             "iteration": 2,
             "s1_score": 0.6,
             "s2_score": 0.6,
-            "s4_score": 1.0,
+            "s4_score": 0.0,
             "bad_constraint": null,
             "counterexample": "Falsifying example: test_is_palindrome(\n    s='0:',\n)",
-            "repaired_spec": "from hypothesis import given, strategies as st\nimport re\n\n@given(st.text(min_size=1, max_size=20))\ndef test_is_palindrome(s):\n    def _clean_for_palindrome(text):\n        return re.sub(r'[^a-z0-9]', '', text.lower())\n\n    result = is_palindrome(s)\n    \n    cleaned_s = _clean_for_palindrome(s)\n    expected_result = (cleaned_s == cleaned_s[::-1])\n    \n    assert result == expected_result",
-            "converged": false
-          },
-          {
-            "iteration": 3,
-            "s1_score": 1.0,
-            "s2_score": 1.0,
-            "s4_score": 1.0,
-            "bad_constraint": null,
-            "counterexample": "Falsifying example: test_is_palindrome(\n    s='0\u00b9',\n)",
-            "repaired_spec": "from hypothesis import given, strategies as st\n\n@given(st.text(min_size=1, max_size=20))\ndef test_is_palindrome(s):\n    def _clean_for_palindrome(text):\n        cleaned_chars = []\n        for char in text:\n            if char.isalnum():\n                cleaned_chars.append(char.lower())\n        return \"\".join(cleaned_chars)\n\n    result = is_palindrome(s)\n    \n    cleaned_s = _clean_for_palindrome(s)\n    expected_result = (cleaned_s == cleaned_s[::-1])\n    \n    assert result == expected_result",
+            "repaired_spec": "from hypothesis import given, strategies as st\n\n@given(st.text(max_size=20))\ndef test_is_palindrome(s):\n    cleaned = \"\".join(c.lower() for c in s if c.isalnum())\n    assert is_palindrome(s) == (cleaned == cleaned[::-1])",
             "converged": true
           }
         ],
@@ -363,9 +427,9 @@
       "predicted": "overconstrained",
       "correct_diagnosis": true,
       "signals": {
-        "s1": 1.0,
+        "s1": 0.6,
         "s2": 0.6,
-        "s3": 0.0,
+        "s3": 0.5,
         "s4": 1.0
       },
       "diagnosis": {
@@ -373,9 +437,9 @@
         "confidence": 1.0,
         "weighted_score": 0.0,
         "signal_breakdown": {
-          "s1": 1.0,
+          "s1": 0.6,
           "s2": 0.6,
-          "s3": 0.0,
+          "s3": 0.5,
           "s4": 1.0
         },
         "overconstrained_via": "correct_impl_fails_spec"
@@ -383,7 +447,7 @@
       "repair": {
         "converged": true,
         "iterations": 1,
-        "final_spec": "from hypothesis import given, strategies as st, assume\n\n@given(x=st.integers(), lo=st.integers(), hi=st.integers())\ndef test_clamp(x, lo, hi):\n    assume(lo <= hi)\n    result = clamp(x, lo, hi)\n    assert lo <= result <= hi\n    if x < lo:\n        assert result == lo\n    elif x > hi:\n        assert result == hi\n    else:\n        assert result == x",
+        "final_spec": "from hypothesis import given, strategies as st, assume\n\n@given(st.integers(), st.integers(), st.integers())\ndef test_clamp(x, lo, hi):\n    assume(lo <= hi)\n    result = clamp(x, lo, hi)\n    expected = max(lo, min(x, hi))\n    assert result == expected",
         "history": [
           {
             "iteration": 1,
@@ -392,20 +456,20 @@
             "s4_score": 1.0,
             "bad_constraint": {
               "operator": "FlipComparison",
-              "original": "assert result ==",
-              "mutated": "assert result !=",
-              "mutated_spec": "from hypothesis import given, strategies as st, assume\n@given(st.integers(), st.integers(), st.integers())\ndef test_clamp(x, lo, hi):\n    assume(lo <= x <= hi)\n    result = clamp(x, lo, hi)\n    assert result != x",
+              "original": "result == x",
+              "mutated": "result != x",
+              "mutated_spec": "from hypothesis import given, strategies as st, assume\n\n@given(st.integers(), st.integers(), st.integers())\ndef test_clamp(x, lo, hi):\n    assume(lo <= x <= hi)\n    result = clamp(x, lo, hi)\n    assert result != x",
               "coverage_delta": 5,
               "newly_covered_lines": [
                 16,
+                17,
                 8,
-                13,
                 14,
                 15
               ]
             },
             "counterexample": "None",
-            "repaired_spec": "from hypothesis import given, strategies as st, assume\n\n@given(x=st.integers(), lo=st.integers(), hi=st.integers())\ndef test_clamp(x, lo, hi):\n    assume(lo <= hi)\n    result = clamp(x, lo, hi)\n    assert lo <= result <= hi\n    if x < lo:\n        assert result == lo\n    elif x > hi:\n        assert result == hi\n    else:\n        assert result == x",
+            "repaired_spec": "from hypothesis import given, strategies as st, assume\n\n@given(st.integers(), st.integers(), st.integers())\ndef test_clamp(x, lo, hi):\n    assume(lo <= hi)\n    result = clamp(x, lo, hi)\n    expected = max(lo, min(x, hi))\n    assert result == expected",
             "converged": true
           }
         ],
@@ -418,9 +482,9 @@
       "predicted": "overconstrained",
       "correct_diagnosis": true,
       "signals": {
-        "s1": 0.8,
+        "s1": 0.4,
         "s2": 0.0,
-        "s3": 0.0,
+        "s3": 0.5,
         "s4": 1.0
       },
       "diagnosis": {
@@ -428,9 +492,9 @@
         "confidence": 1.0,
         "weighted_score": 0.0,
         "signal_breakdown": {
-          "s1": 0.8,
+          "s1": 0.4,
           "s2": 0.0,
-          "s3": 0.0,
+          "s3": 0.5,
           "s4": 1.0
         },
         "overconstrained_via": "correct_impl_fails_spec"
@@ -438,16 +502,25 @@
       "repair": {
         "converged": true,
         "iterations": 1,
-        "final_spec": "from hypothesis import given, strategies as st\n@given(st.text(min_size=0, max_size=20))\ndef test_string_palindrome_check(s):\n    expected_result = (s == s[::-1])\n    actual_result = string_palindrome_check(s)\n    assert actual_result == expected_result",
+        "final_spec": "from hypothesis import given, strategies as st\n@given(st.text(max_size=20))\ndef test_string_palindrome_check(s):\n    result = string_palindrome_check(s)\n    assert result == (s == s[::-1])",
         "history": [
           {
             "iteration": 1,
-            "s1_score": 0.8,
-            "s2_score": 0.8,
+            "s1_score": 0.4,
+            "s2_score": 0.4,
             "s4_score": 1.0,
-            "bad_constraint": null,
+            "bad_constraint": {
+              "operator": "RemovePrecondition",
+              "original": "min_size=2",
+              "mutated": "min_size=0",
+              "mutated_spec": "from hypothesis import given, strategies as st\n\n@given(st.text(min_size=0, max_size=20))\ndef test_string_palindrome_check(s):\n    result = string_palindrome_check(s)\n    assert result is True",
+              "coverage_delta": 1,
+              "newly_covered_lines": [
+                16
+              ]
+            },
             "counterexample": "Falsifying example: test_string_palindrome_check(\n    s='01',\n)",
-            "repaired_spec": "from hypothesis import given, strategies as st\n@given(st.text(min_size=0, max_size=20))\ndef test_string_palindrome_check(s):\n    expected_result = (s == s[::-1])\n    actual_result = string_palindrome_check(s)\n    assert actual_result == expected_result",
+            "repaired_spec": "from hypothesis import given, strategies as st\n@given(st.text(max_size=20))\ndef test_string_palindrome_check(s):\n    result = string_palindrome_check(s)\n    assert result == (s == s[::-1])",
             "converged": true
           }
         ],
@@ -461,19 +534,19 @@
       "correct_diagnosis": true,
       "signals": {
         "s1": 1.0,
-        "s2": 0.4,
-        "s3": 0.0,
-        "s4": 0.5
+        "s2": 0.6,
+        "s3": 0.5,
+        "s4": 1.0
       },
       "diagnosis": {
         "verdict": "correct",
-        "confidence": 0.5,
-        "weighted_score": 0.26,
+        "confidence": 1.0,
+        "weighted_score": 0.24,
         "signal_breakdown": {
           "s1": 1.0,
-          "s2": 0.4,
-          "s3": 0.0,
-          "s4": 0.5
+          "s2": 0.6,
+          "s3": 0.5,
+          "s4": 1.0
         }
       },
       "repair": null
@@ -484,19 +557,19 @@
       "predicted": "correct",
       "correct_diagnosis": true,
       "signals": {
-        "s1": 0.8,
-        "s2": 0.4,
-        "s3": 0.0,
+        "s1": 1.0,
+        "s2": 0.6,
+        "s3": 0.5,
         "s4": 1.0
       },
       "diagnosis": {
         "verdict": "correct",
         "confidence": 1.0,
-        "weighted_score": 0.27999999999999997,
+        "weighted_score": 0.24,
         "signal_breakdown": {
-          "s1": 0.8,
-          "s2": 0.4,
-          "s3": 0.0,
+          "s1": 1.0,
+          "s2": 0.6,
+          "s3": 0.5,
           "s4": 1.0
         }
       },
@@ -510,18 +583,18 @@
       "signals": {
         "s1": 1.0,
         "s2": 0.6,
-        "s3": 0.0,
-        "s4": 0.5
+        "s3": 0.5,
+        "s4": 1.0
       },
       "diagnosis": {
         "verdict": "correct",
-        "confidence": 0.5,
-        "weighted_score": 0.19,
+        "confidence": 1.0,
+        "weighted_score": 0.24,
         "signal_breakdown": {
           "s1": 1.0,
           "s2": 0.6,
-          "s3": 0.0,
-          "s4": 0.5
+          "s3": 0.5,
+          "s4": 1.0
         }
       },
       "repair": null
@@ -534,17 +607,17 @@
       "signals": {
         "s1": 1.0,
         "s2": 0.6,
-        "s3": 0.0,
+        "s3": 0.5,
         "s4": 1.0
       },
       "diagnosis": {
         "verdict": "correct",
         "confidence": 1.0,
-        "weighted_score": 0.13999999999999999,
+        "weighted_score": 0.24,
         "signal_breakdown": {
           "s1": 1.0,
           "s2": 0.6,
-          "s3": 0.0,
+          "s3": 0.5,
           "s4": 1.0
         }
       },
@@ -557,18 +630,18 @@
       "correct_diagnosis": true,
       "signals": {
         "s1": 1.0,
-        "s2": 0.6,
-        "s3": 0.0,
+        "s2": 0.4,
+        "s3": 0.5,
         "s4": 1.0
       },
       "diagnosis": {
         "verdict": "correct",
         "confidence": 1.0,
-        "weighted_score": 0.13999999999999999,
+        "weighted_score": 0.31,
         "signal_breakdown": {
           "s1": 1.0,
-          "s2": 0.6,
-          "s3": 0.0,
+          "s2": 0.4,
+          "s3": 0.5,
           "s4": 1.0
         }
       },

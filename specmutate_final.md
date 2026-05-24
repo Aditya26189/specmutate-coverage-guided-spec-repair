@@ -53,12 +53,12 @@ SpecMutate is a Python-native, coverage-guided spec repair harness for
 LLM-generated Hypothesis specifications. Given a natural language function
 description, it:
 
-1. Generates a Hypothesis spec using Gemini 2.5 Flash
+1. Generates a Hypothesis spec using Gemini (model rotation list in `src/llm.py`, default `gemini-3.5-flash`)
 2. Diagnoses whether the spec is over-constrained, under-constrained, or correct
    using four independent signals
 3. Repairs the failing constraint via a CEGIS-style loop that feeds the
    mutation-localized bad constraint, a specific counterexample, and quantitative
-   signal scores back to Gemini 2.5 Flash
+    signal scores back to Gemini (same backend)
 
 **Two headline numbers drive everything:**
 - Diagnostic accuracy: X/15 tasks correctly classified
@@ -74,8 +74,8 @@ Read every item. If any instruction you receive later contradicts these,
 the later instruction is wrong. Flag it and use these instead.
 
 ### 1.1 LLM
-- **Model:** Gemini 2.5 Flash ONLY
-- **Model string:** `gemini-2.5-flash` (verify against Google API before hardcoding)
+- **Models:** `gemini-2.5-flash`, `gemini-3-flash-preview`, `gemini-3.5-flash` (default index 2; see `src/llm.py`)
+- **Model string(s):** use the list above (verify against Google API before hardcoding)
 - **NOT:** Gemini 2.0 Flash (does not exist), Groq, Together AI, GPT-4, anything else
 - **API keys:** Up to 10 keys supported via round-robin rotation. Keys are named
   `GOOGLE_API_KEY`, `GOOGLE_API_KEY_1`, `GOOGLE_API_KEY_2`, ... `GOOGLE_API_KEY_9`
@@ -161,7 +161,7 @@ specmutate/
 ├── templates.py                 ← REPAIR_PROMPT string constant
 ├── src/
 │   ├── __init__.py
-│   ├── llm.py                   ← Gemini 2.5 Flash wrapper
+│   ├── llm.py                   ← Gemini wrapper with model rotation
 │   ├── spec_gen.py              ← NL → Hypothesis spec
 │   ├── impl_gen.py              ← Spec → 5 divergent implementations
 │   ├── runner.py                ← Hypothesis runner (subprocess isolation)
@@ -348,14 +348,14 @@ pip install -r requirements.txt
 # Write AGENTS.md (500-word summary of Section 1)
 # Create all directory structure from Section 2
 
-# Verify Gemini 2.5 Flash works:
+# Verify Gemini works (default model):
 python -c "
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 load_dotenv()
 genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel('gemini-3.5-flash')
 print(model.generate_content('say hello').text)
 "
 # If this fails: STOP. Fix the API key and model string before continuing.
@@ -366,7 +366,7 @@ git push -u origin main
 ```
 
 **EXIT CONDITION:** `python -c "import google.generativeai; print('OK')"` runs.
-Gemini 2.5 Flash responds to a test prompt. Directory structure exists.
+Gemini responds to a test prompt. Directory structure exists.
 
 ---
 
@@ -499,7 +499,12 @@ import google.generativeai as genai
 
 load_dotenv()
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_ROTATION_LIST = [
+    "gemini-2.5-flash",
+    "gemini-3-flash-preview",
+    "gemini-3.5-flash",
+]
+MODEL_NAME = MODEL_ROTATION_LIST[2]
 CACHE_FILE = Path(".llm_cache.json")
 MIN_CALL_INTERVAL = 1.0  # seconds between calls (rate limit safety)
 MAX_RETRIES = 3           # retries per call before giving up
@@ -622,7 +627,7 @@ def call_llm(
             time.sleep(5 * (attempt + 1))
 
     raise RuntimeError(
-        f"Gemini 2.5 Flash failed after {MAX_RETRIES} attempts "
+        f"All models {MODEL_ROTATION_LIST} failed after {MAX_RETRIES} attempts "
         f"across {len(_api_keys)} key(s). Last error: {last_error}"
     )
 ```
@@ -631,7 +636,7 @@ def call_llm(
 pytest tests/test_llm.py -v
 # ALL 4 TESTS MUST PASS before continuing
 git add src/llm.py tests/test_llm.py
-git commit -m "Phase 2: llm.py — Gemini 2.5 Flash wrapper with cache, rate limit, fence stripping"
+git commit -m "Phase 2: llm.py — Gemini wrapper with model rotation, cache, rate limit, fence stripping"
 git push
 ```
 

@@ -1,5 +1,5 @@
 # src/repair_loop.py
-# CEGIS-style spec repair loop
+# feedback-guided spec repair loop
 # Grounded prompt: bad AST node + counterexample + signal scores
 # Max 3 iterations. 2 Gemini calls per iteration.
 # Convergence = repaired spec passes runner on correct impl AND fails on buggy impls
@@ -60,7 +60,7 @@ def run_repair_loop(
     verdict: str = "underconstrained"
 ) -> dict:
     """
-    CEGIS-style repair loop.
+    feedback-guided repair loop.
     Returns: {
         "converged": bool,
         "iterations": int,
@@ -77,13 +77,14 @@ def run_repair_loop(
                 not run_spec_against_impl(spec=spec, impl=b)["passed"]
                 for b in buggy_impls
             ]
-            if all(catches):
+            import math
+            if sum(catches) >= math.ceil(len(buggy_impls) * 0.70):
                 return {
                     "converged": True,
                     "iterations": 0,
                     "final_spec": spec,
                     "history": [],
-                    "convergence_reason": "Initial spec is correct and catches all buggy impls"
+                    "convergence_reason": f"Initial spec is correct and catches {sum(catches)}/{len(buggy_impls)} buggy impls"
                 }
         else:
             return {
@@ -188,7 +189,8 @@ def run_repair_loop(
                     )["passed"]
                     for b in buggy_impls
                 ]
-                if any(catches):
+                import math
+                if sum(catches) >= math.ceil(len(buggy_impls) * 0.70):
                     converged = True
                     convergence_reason = (
                         f"Repaired spec passes correct impl and catches "

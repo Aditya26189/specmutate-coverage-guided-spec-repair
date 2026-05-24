@@ -12,43 +12,30 @@ def compute_stability_score(
     function_name: str,
     n_generations: int = 3,
     test_impls: list[str] | None = None,
-    correct_impl: str | None = None  # FIX 10: use correct impl for meaningful stability signal
+    correct_impl: str | None = None
 ) -> float:
     """
-    Generate the same spec n times at temperature=0.7.
-    Run each spec variant against reference implementations.
-    Agreement rate = fraction of (spec, impl) pairs that agree across variants.
-    High score = spec is stable (deterministically correct or wrong).
-    Low score = task description is ambiguous — flag for human review.
+    Generate the same spec n times at temperature=0.7 and use_cache=False.
+    Measure consensus agreement against correct_impl.
+    Score = 1.0 if all agree (all pass or all fail).
+    Score = 0.0 if there is a split decision.
     """
+    if correct_impl is None:
+        return 1.0
+
     specs = []
-    for i in range(n_generations):
+    for _ in range(n_generations):
         prompt = SPEC_GEN_PROMPT.format(
             description=task_description,
             function_name=function_name
-        ) + f"\n# Gen ID: {i}"
-        spec = call_llm(prompt, temperature=0.7, use_cache=True)
+        )
+        spec = call_llm(prompt, temperature=0.7, use_cache=False)
         specs.append(spec)
 
-    if test_impls is None:
-        # FIX 10 APPLIED: original code only used a trivially wrong impl (return None).
-        # Every Hypothesis spec ever written fails against `return None`, so all 3 variants
-        # at T=0.7 agree it fails → agreement = 1.0 → S4 = 1.0 for every task.
-        # The signal is a constant with zero discriminative power.
-        # Fix: use both the correct impl (should pass good specs) and the trivially wrong
-        # impl (should fail all specs). Agreement across both = genuine stability signal.
-        trivially_wrong = f"def {function_name}(*args, **kwargs): return None"
-        if correct_impl is not None:
-            test_impls = [correct_impl, trivially_wrong]
-        else:
-            test_impls = [trivially_wrong]
-
-    # Measure agreement: for each impl, do all specs agree on pass/fail?
-    agreements = []
-    for impl in test_impls:
-        results = [run_spec_against_impl(s, impl)["passed"] for s in specs]
-        # Agreement = all same
-        all_same = len(set(results)) == 1
-        agreements.append(1.0 if all_same else 0.0)
-
-    return sum(agreements) / len(agreements) if agreements else 0.5
+    results = [run_spec_against_impl(s, correct_impl)["passed"] for s in specs]
+    pass_count = sum(1 for r in results if r)
+    
+    # Agreement scoring logic: all same (3 pass or 0 pass) -> 1.0, otherwise -> 0.0
+    if pass_count == n_generations or pass_count == 0:
+        return 1.0
+    return 0.0

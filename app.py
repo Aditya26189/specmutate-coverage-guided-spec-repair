@@ -171,7 +171,7 @@ correct_count = results["correct_diagnoses"]
 st.markdown(f"""
 <div class="headline-banner">
   <div class="headline-title">🔬 SpecMutate — Spec Repair Dashboard</div>
-  <div class="headline-sub">Coverage-guided specification diagnosis &amp; CEGIS repair · gemini-2.5-flash · 15-task benchmark</div>
+  <div class="headline-sub">Coverage-guided specification diagnosis &amp; feedback-guided LLM repair · gemini-2.5-flash · 15-task benchmark</div>
 </div>
 """, unsafe_allow_html=True)
 

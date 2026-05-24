@@ -8,7 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Model rotation: primary → fallback 1 → fallback 2
 # When all keys hit quota on the active model, escalate to the next model.
@@ -24,13 +24,15 @@ MAX_RETRIES = 5           # retries per call before giving up
 
 # --- API key rotation ---
 def _load_api_keys() -> list[str]:
-    """Load all available API keys from environment. Primary key first."""
+    """Load all available API keys directly from .env. Primary key first."""
+    import dotenv
+    env_values = dotenv.dotenv_values(".env")
     keys = []
-    primary = os.getenv("GOOGLE_API_KEY")
+    primary = env_values.get("GOOGLE_API_KEY")
     if primary:
         keys.append(primary)
     for i in range(1, 10):
-        k = os.getenv(f"GOOGLE_API_KEY_{i}")
+        k = env_values.get(f"GOOGLE_API_KEY_{i}")
         if k:
             keys.append(k)
     if not keys:
@@ -49,7 +51,7 @@ def _load_api_keys() -> list[str]:
 
 _api_keys: list[str] = _load_api_keys()
 _current_key_index: int = 0
-_current_model_index: int = 0  # index into MODEL_ROTATION_LIST
+_current_model_index: int = 2  # index into MODEL_ROTATION_LIST
 _cache: dict = {}
 _last_call_time: float = 0.0
 _last_quota_exhaustion_time: float = 0.0
@@ -161,7 +163,11 @@ def call_llm(
             genai.configure(api_key=current_key)
             model = genai.GenerativeModel(active_model)
             config = genai.types.GenerationConfig(temperature=temperature)
-            response = model.generate_content(prompt, generation_config=config)
+            response = model.generate_content(
+                prompt,
+                generation_config=config,
+                request_options={"timeout": 120.0}
+            )
             result = response.text
             _last_call_time = time.time()
 

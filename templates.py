@@ -1,5 +1,5 @@
 # templates.py
-# Repair prompt template — grounded CEGIS-style repair
+# Repair prompt template — grounded feedback-guided repair
 # DO NOT modify this string without updating AGENTS.md
 
 REPAIR_PROMPT = """You are repairing a Python Hypothesis specification that has been \

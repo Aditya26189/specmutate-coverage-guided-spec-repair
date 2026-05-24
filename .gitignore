@@ -6,3 +6,7 @@ __pycache__/
 .hypothesis/
 *.pyc
 *.pyo
+
+problem_statement.md
+specmutate_final.md
+AGENTS.md

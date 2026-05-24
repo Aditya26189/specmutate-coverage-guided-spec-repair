@@ -2,8 +2,15 @@
 
 This document is a critical reference summary of the architectural boundaries, design patterns, and locked decisions for SpecMutate. Maintain compliance with these rules throughout all iterations.
 
+## 0. Hackathon Goal & Integrity
+We aim to WIN the hackathon through strong engineering, rigorous evaluation, and transparent reporting. Bad results are better than fake results.
+- Do not fabricate results, hardcode labels, or claim accuracy that was not reproduced.
+- Prefer oracle-free evaluation; if any benchmark oracles are used, disclose them clearly.
+- Cache usage must be disclosed; audit runs should disable cache or log cache hits.
+- If integrity fixes reduce accuracy, report the new numbers and the reason.
+
 ## 1. LLM Core
-SpecMutate uses **Gemini 2.5 Flash** (`gemini-2.5-flash`) exclusively. Up to 10 API keys are supported via round-robin rotation in `src/llm.py` (`GOOGLE_API_KEY` and `GOOGLE_API_KEY_1` through `GOOGLE_API_KEY_9`). On encountering a 429 quota/resource exhaustion error, the wrapper rotates to the next key, waits 2 seconds, and retries. Cached calls are saved to `.llm_cache.json` to reduce expenses during pipeline execution.
+ Up to 10 API keys are supported via round-robin rotation in `src/llm.py` (`GOOGLE_API_KEY` and `GOOGLE_API_KEY_1` through `GOOGLE_API_KEY_9`). Models are configured in `src/llm.py` as `gemini-2.5-flash`, `gemini-3-flash-preview`, and `gemini-3.5-flash` (default index 2). On encountering a 429 quota/resource exhaustion error, the wrapper rotates to the next key, waits 2 seconds, and retries. Cached calls are saved to `.llm_cache.json` to reduce expenses during pipeline execution.
 
 ## 2. Benchmark Definition
 The benchmark is defined in `benchmark.json` and consists of exactly 15 tasks in a 5/5/5 distribution:
